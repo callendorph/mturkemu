@@ -1,0 +1,23 @@
+{
+  "name": "mturkemu",
+  "version": "1.0.0",
+  "description": "Mechanical Turk Mockup / Emulator",
+  "main": "index.js",
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "jquery": "^3.2.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mechanicalturk",
+    "mturk",
+    "mockup",
+    "emulator"
+  ],
+  "author": "Carl Allendorph <callendorph@gmail.com>",
+  "license": "UNLICENSED",
+  "private": true
+}
