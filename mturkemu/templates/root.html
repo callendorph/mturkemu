@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="MTurkMock">
+    <meta name="author" content="Carl Allendorph">
+    <meta name="viewport" content="width=device-width">
+
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bootstrap-theme.min.css' %}">
+    <link rel="stylesheet" href="{% static 'app.css' %}">
+    <title> MTurk Mockup </title>
+
+  </head>
+
+  <body>
+
+    <div class="mturk-navbar">
+      {% block navbar %}
+      {% endblock %}
+    </div>
+
+    <div class="mturk-content">
+      {% block content %}
+      {% endblock %}
+    </div>
+
+    <script src="{% static 'jquery.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+  </body>
+
+</html>

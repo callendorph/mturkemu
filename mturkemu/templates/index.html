@@ -1,0 +1,60 @@
+{% extends "root.html" %}
+
+{% block navbar %}
+{% include "navbar.html" %}
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-sm-12 col-md-10 col-md-offset-1">
+      <h1>Mturk Emulator</h1>
+      <p>
+        Below you can select to interact with the MTurk Emulator
+        as either a worker or a requester.
+      </p>
+      {% for message in messages %}
+      <div class="alert {{ message.tags }}">
+        <p>
+          {{message}}
+        </p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-sm-6 col-md-5 col-md-offset-1">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h3> Worker Interface </h3>
+        </div>
+        <div class="panel-body">
+          <p>
+            Complete tasks posted by the requesters.
+          </p>
+          <p>
+            <a href="/worker/home/">Get Started ...</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-md-5">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h3> Requester Interface </h3>
+        </div>
+        <div class="panel-body">
+          <p>
+            Create and Manage Tasks for Workers to complete.
+          </p>
+          <p>
+            <a href="/requester/home/"> Get Started ...</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
