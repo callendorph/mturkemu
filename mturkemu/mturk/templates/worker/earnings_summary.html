@@ -1,0 +1,45 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3> Earnings Summary </h3>
+  </div>
+  <div class="panel-body">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>
+            Earnings
+          </th>
+          <th>
+            Value
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            Approved Tasks
+          </td>
+          <td>
+            {{ earnings.tasks }}
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Bonuses
+          </td>
+          <td>
+            {{ earnings.bonuses }}
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Total Earnings
+          </td>
+          <td>
+            {{ earnings.total }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

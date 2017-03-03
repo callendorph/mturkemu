@@ -1,0 +1,17 @@
+{% extends "requester/root.html" %}
+
+{% block sidebar %}
+{% include "requester/sidebar.html" %}
+{% endblock %}
+
+{% block tab %}
+<div class="row">
+  <div class="col-sm-12 col-md-12">
+    <h2> Requester Settings</h2>
+    {% include "requester/requester_id.html" with requester=requester %}
+
+    {% include "requester/access_token_panel.html" with access_list=access_list %}
+
+  </div>
+</div>
+{% endblock %}

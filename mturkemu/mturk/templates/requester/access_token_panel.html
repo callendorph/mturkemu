@@ -1,0 +1,38 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3> API Access Tokens </h3>
+  </div>
+  <div class="panel-body">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Access Key</th>
+          <th>Secret Key</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for access in access_list %}
+        <tr>
+          <td> {{access.access_key}} </td>
+          <td> {{access.secret_key}} </td>
+          <td>
+            <a class="btn btn-default" href="/requester/access/{{access.id}}/remove/">
+              <span class="glyphicon glyphicon-trash"></span>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="3">
+            No Access Tokens Available.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <a class="btn" href="/requester/access/create/">
+      Create Access Token
+    </a>
+  </div>
+</div>

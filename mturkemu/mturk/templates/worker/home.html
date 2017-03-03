@@ -1,0 +1,18 @@
+{% extends "worker/root.html" %}
+
+{% block sidebar %}
+{% include "worker/sidebar.html" %}
+{% endblock %}
+
+{% block tab %}
+<div class="row">
+  <div class="col-sm-12 col-md-12">
+    <h2> Worker Dashboard</h2>
+    <ol class="breadcrumb">
+      <li>Id: {{ worker.aws_id }}</li>
+    </ol>
+    {% include "worker/earnings_summary.html" with earnings=earnings %}
+    {% include "worker/task_summary.html" with tasks=tasks %}
+  </div>
+</div>
+{% endblock %}

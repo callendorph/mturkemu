@@ -1,0 +1,67 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3> Task Summary </h3>
+  </div>
+  <div class="panel-body">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>
+            HITs
+          </th>
+          <th>
+            Value
+          </th>
+          <th>
+            Rate
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            Submitted
+          </td>
+          <td>
+            {{ tasks.submitted.count }}
+          </td>
+          <td>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Approved
+          </td>
+          <td>
+            {{ tasks.approved.count }}
+          </td>
+          <td>
+            {{ tasks.approved.rate }}
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Rejected
+          </td>
+          <td>
+            {{ tasks.rejected.count }}
+          </td>
+          <td>
+            {{ tasks.rejected.rate }}
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Pending
+          </td>
+          <td>
+            {{ tasks.pending.count }}
+          </td>
+          <td>
+          </td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+</div>

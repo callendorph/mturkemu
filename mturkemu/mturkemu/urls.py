@@ -10,7 +10,9 @@ from django.conf.urls import url, include
 from django.contrib import admin
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+
 from mturk.views import MTurkMockAPI, MTurkCreateUser
+from mturk.urls import workerPatterns, requesterPatterns
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
@@ -23,6 +25,9 @@ urlpatterns = [
     # GET = Index Webapp Page
     # POST = MTurk API Endpoint
     url(r'^$', MTurkMockAPI.as_view(), name="index"),
+    # UI for the MTurk Emulator
+    url(r'^worker/', include(workerPatterns)),
+    url(r'^requester/', include(requesterPatterns)),
 
 ]
 

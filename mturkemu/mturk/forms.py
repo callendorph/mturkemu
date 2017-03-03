@@ -23,3 +23,26 @@ class UserSignupForm(forms.Form):
     username = forms.CharField(max_length=150, label="Username", validators=[check_user_exists])
     email = forms.EmailField(required=False, label="Email")
     password = forms.CharField(label="Password")
+
+class QueryForm(forms.Form):
+    """
+    This form is for providing a search query for a list
+    """
+    MAX_QUERY_LEN = 256
+    query = forms.CharField(max_length = MAX_QUERY_LEN, label="Query", required=False)
+
+class ListViewForm(forms.Form):
+    """
+    This form is for allowing lists to be paginated in a template
+    """
+    offset = forms.IntegerField(min_value=1, required=False)
+    count = forms.IntegerField(min_value=1, required=False)
+
+class QualCreateForm(forms.Form):
+    """
+    This form is for allowing the requester to  make a basic qualification
+    through the web interface
+    """
+
+    name = forms.CharField(max_length = Qualification.MAX_NAME_LEN, label="Name")
+    description = forms.CharField(label="Description")

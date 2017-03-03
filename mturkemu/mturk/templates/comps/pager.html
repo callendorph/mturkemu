@@ -1,0 +1,10 @@
+<nav aria-label="table-pager">
+  <ul class="pager">
+    <li class="previous {% if page.offset == 1 %} disabled {% endif %}">
+      <a href="{{url}}?offset={{page.offset|add:"-1"}}">Previous</a>
+    </li>
+    <li class="next {% if page.offset == page.total %} disabled {% endif%}">
+      <a href="{{url}}?offset={{page.offset|add:"1"}}">Next</a>
+    </li>
+  </ul>
+</nav>

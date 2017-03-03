@@ -1,0 +1,22 @@
+<div class="list-group">
+  <a class="list-group-item {% if active == 'home' %}active{% endif %}"
+     href="/worker/home/"> Home </a>
+  <a class="list-group-item {% if active == 'quals' %}active{% endif %}"
+     href="/worker/quals/"> Qualifications </a>
+  {% if active == "quals" %}
+  <a class="list-group-item" href="/worker/quals/reqs/">
+    <div class="list-group-child">
+      Pending Requests
+    </div>
+  </a>
+  <a class="list-group-item" href="/worker/quals/grants/">
+    <div class="list-group-child">
+      Grants
+    </div>
+  </a>
+  {% endif %}
+  <a class="list-group-item {% if active == 'tasks' %}active{% endif %}"
+     href="/worker/tasks/"> Tasks </a>
+  <a class="list-group-item  {% if active == 'settings' %}active{% endif %}"
+     href="/worker/settings/"> Settings </a>
+</div>
