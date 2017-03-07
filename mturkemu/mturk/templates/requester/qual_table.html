@@ -1,0 +1,44 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3> Requester Created Qualifications </h3>
+  </div>
+  <div class="panel-body">
+
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th> Name </th>
+          <th> AutoGranted? </th>
+          <th> Has Test? </th>
+          <th> Total Grants </th>
+          <th> Actions </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for qual in quals.list %}
+        <tr onclick="window.document.location='/requester/quals/{{qual.id}}/';">
+          <td> {{qual.name}} </td>
+          <td> {{qual.auto_grant|yesno}} </td>
+          <td> {{qual.has_test|yesno}} </td>
+          <td> {{qual.total_grants}} </td>
+          <td>
+            <a class="btn btn-default" href="/requester/quals/{{qual.id}}/remove/">
+              <span class="glyphicon glyphicon-trash"/>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7"> No Qualifications Present </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <a class="btn btn-default" href="/requester/quals/create/">
+      Create Qualification
+    </a>
+  </div>
+  <div class="panel-footer">
+    {% include "comps/pager.html" with url="/requester/quals/" page=quals %}
+  </div>
+</div>

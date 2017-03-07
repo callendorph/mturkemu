@@ -1,0 +1,29 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3> Qualification </h3>
+  </div>
+  <div class="panel-body">
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th> Property </th>
+          <th> Value </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for info in qual_info %}
+        <tr>
+          <td> {{info.label}} </td>
+          <td> {{info.value}} </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="2"> ERROR: No Qual Info Present </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+</div>

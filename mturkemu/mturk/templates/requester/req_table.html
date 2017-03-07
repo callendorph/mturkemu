@@ -1,0 +1,42 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3> Requests </h3>
+  </div>
+  <div class="panel-body">
+    <table class="table">
+      <thead>
+        <tr>
+          <th> Worker </th>
+          <th> Qualification </th>
+          <th> Last Requested </th>
+          <th> Actions </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for request in requests.list %}
+        <tr>
+          <td> {{request.worker.aws_id}} </td>
+          <td> {{request.qualification.name}} </td>
+          <td> {{request.last_request}} </td>
+          <td>
+            <a class="btn btn-default" href="/requester/quals/reqs/{{request.id}}/approve/">
+              <span class="glyphicon glyphicon-thumbs-up"/>
+            </a>
+            <a class="btn btn-default" href="/requester/quals/reqs/{{request.id}}/reject/">
+              <span class="glyphicon glyphicon-thumbs-down"/>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4"> No Requests Present </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+  <div class="panel-footer">
+    {% include "comps/pager.html" with url="/requester/quals/reqs/" page=requests %}
+  </div>
+</div>

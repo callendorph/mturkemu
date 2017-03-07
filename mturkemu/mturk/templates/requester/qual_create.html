@@ -1,0 +1,55 @@
+{% extends "requester/root.html" %}
+
+{% block sidebar %}
+{% include "requester/sidebar.html" %}
+{% endblock %}
+
+{% block tab %}
+<div class="row">
+  <div class="col-sm-12 col-md-12">
+    <h2> Create Qualification </h2>
+    <ol class="breadcrumb">
+      <li>Id: {{ requester.aws_id }}</li>
+    </ol>
+
+    <div class="panel panel-default">
+      <div class="panel-body">
+        <p>
+          Create a simple qualification below. The name must
+          be unique for your account. This new qualification
+          will not auto grant, which means workers can request
+          it but you will have to manually approve the requests.
+        </p>
+
+          {% if form.errors %}
+          <div class="alert alert-danger">
+              {{form.errors.as_ul}}
+          </div>
+          {% endif %}
+          <form method="POST" action="{% url 'requester-qual-create' %}">
+            {% csrf_token %}
+            <div class="form-group">
+              <label for="{{form.name.id_for_label}}">
+                {{form.name.label}}
+              </label>
+              <input type="text" name="{{form.name.html_name}}"
+                     class="form-control"
+                     id="{{form.name.id_for_label}}"/>
+            </div>
+            <div class="form-group">
+              <label for="{{form.description.id_for_label}}">
+                {{form.description.label}}
+              </label>
+              <textarea name="{{form.description.html_name}}"
+                     class="form-control"
+                        id="{{form.description.id_for_label}}">
+              </textarea>
+            </div>
+            <input class="btn btn-default" type="submit" value="Create" />
+          </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

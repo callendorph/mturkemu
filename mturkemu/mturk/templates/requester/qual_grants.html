@@ -1,0 +1,16 @@
+{% extends "requester/root.html" %}
+
+{% block sidebar %}
+{% include "requester/sidebar.html" %}
+{% endblock %}
+
+{% block tab %}
+<div class="row">
+  <div class="col-sm-12 col-md-12">
+    <h2> Qualification Grants </h2>
+    {% include "requester/requester_id.html" with requester=requester %}
+
+    {% include "requester/grant_table.html" with grants=grants %}
+  </div>
+</div>
+{% endblock %}
