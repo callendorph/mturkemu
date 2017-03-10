@@ -1,0 +1,16 @@
+{% extends "worker/root.html" %}
+
+{% block sidebar %}
+{% include "worker/sidebar.html" %}
+{% endblock %}
+
+{% block tab %}
+<div class="row">
+  <div class="col-sm-12 col-md-12">
+    <h1> Worker Requests </h1>
+    {% include "worker/worker_id.html" with worker=worker %}
+
+    {% include "worker/req_table.html" with requests=requests %}
+  </div>
+</div>
+{% endblock %}

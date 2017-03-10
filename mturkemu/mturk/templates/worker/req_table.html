@@ -1,0 +1,40 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3> Requests </h3>
+  </div>
+  <div class="panel-body">
+    <table class="table">
+      <thead>
+        <tr>
+          <th> Qualification </th>
+          <th> Last Requested </th>
+          <th> State </th>
+          <th> Reason </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for request in requests.list %}
+        <tr>
+          <td> {{request.qualification.name}} </td>
+          <td> {{request.last_request}} </td>
+          {% if request.rejected %}
+          <td> Rejected </td>
+          <td> {{request.reason}} </td>
+          {% else %}
+          <td> Pending </td>
+          <td> </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4"> No Requests Present </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+  <div class="panel-footer">
+    {% include "comps/pager.html" with url="/worker/quals/reqs/" page=requests %}
+  </div>
+</div>

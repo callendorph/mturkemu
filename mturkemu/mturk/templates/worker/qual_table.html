@@ -1,0 +1,42 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3> Qualifications </h3>
+  </div>
+  <div class="panel-body">
+    <table class="table">
+      <thead>
+        <tr>
+          <th> Requester </th>
+          <th> Qualification </th>
+          <th> Requestable? </th>
+          <th> Has Test? </th>
+          <th> Actions </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for qual in quals.list %}
+        <tr>
+          <td> {{qual.requester.user.get_full_name}} </td>
+          <td> {{qual.name}} </td>
+          <td> {{qual.requestable|yesno}} </td>
+          <td> {{qual.has_test|yesno}}</td>
+          <td>
+            <a class="btn btn-default"
+               href="/worker/quals/{{qual.id}}/request/">
+              <span class="glyphicon glyphicon-plus"/>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4"> No Qualifications Present </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+  <div class="panel-footer">
+    {% include "comps/pager.html" with url="/worker/quals/" page=requests %}
+  </div>
+</div>

@@ -1,0 +1,16 @@
+{% extends "worker/root.html" %}
+
+{% block sidebar %}
+{% include "worker/sidebar.html" %}
+{% endblock %}
+
+{% block tab %}
+<div class="row">
+  <div class="col-sm-12 col-md-12">
+    <h1> Worker Qualifications </h1>
+    {% include "worker/worker_id.html" with worker=worker %}
+
+    {% include "worker/grant_table.html" with grants=grants %}
+  </div>
+</div>
+{% endblock %}

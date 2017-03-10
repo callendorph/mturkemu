@@ -1,0 +1,39 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3> Grants </h3>
+  </div>
+  <div class="panel-body">
+    <table class="table">
+      <thead>
+        <tr>
+          <th> Qualification </th>
+          <th> Granted On </th>
+          <th> Value </th>
+          <th> Tasks </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for grant in grants.list %}
+        <tr>
+          <td> {{grant.qualification.name}} </td>
+          <td> {{grant.granted}} </td>
+          {% if grant.locale is None %}
+          <td> {{grant.value}} </td>
+          {% else %}
+          <td> {{grant.locale}} </td>
+          {% endif %}
+          <td> {{grant.task_count}} </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4"> No Grants Present </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+  <div class="panel-footer">
+    {% include "comps/pager.html" with url="/worker/quals/grants/" page=grants %}
+  </div>
+</div>
