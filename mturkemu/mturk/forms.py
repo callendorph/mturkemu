@@ -22,7 +22,7 @@ class UserSignupForm(forms.Form):
     """
     username = forms.CharField(max_length=150, label="Username", validators=[check_user_exists])
     email = forms.EmailField(required=False, label="Email")
-    password = forms.CharField(label="Password")
+    password = forms.CharField(label="Password", widget=forms.PasswordInput())
 
 class QueryForm(forms.Form):
     """
@@ -45,4 +45,4 @@ class QualCreateForm(forms.Form):
     """
 
     name = forms.CharField(max_length = Qualification.MAX_NAME_LEN, label="Name")
-    description = forms.CharField(label="Description")
+    description = forms.CharField(label="Description", widget=forms.Textarea(attrs={'rows': 4}))
