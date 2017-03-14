@@ -212,15 +212,15 @@ class Qualification(KeywordMixinModel):
             "AutoGranted" : self.auto_grant,
         }
         if ( len(self.test) > 0):
-            ret["Test"] = self.test.serialize()
-            ret["TestDurationInSeconds"] = self.test_duration.total_seconds()
+            ret["Test"] = self.test
+            ret["TestDurationInSeconds"] = int(self.test_duration.total_seconds())
         if ( len(self.answer) > 0):
             ret["AnswerKey"] = self.answer
 
         if ( self.auto_grant ):
             ret["AutoGrantedValue"] = self.auto_grant_value
         if ( self.retry_active ):
-            ret["RetryDelayInSeconds"] = self.retry_delay.total_seconds()
+            ret["RetryDelayInSeconds"] = int(self.retry_delay.total_seconds())
 
         return(ret)
 
@@ -415,8 +415,8 @@ class Task(models.Model):
             "Title" : self.tasktype.title,
             "Description" : self.tasktype.description,
             "Reward" : "%.02f" % self.tasktype.reward,
-            "AutoApprovalDelayInSeconds" : self.tasktype.auto_approve.total_seconds(),
-            "AssignmentDurationInSeconds" : self.tasktype.assignment_duration.total_seconds(),
+            "AutoApprovalDelayInSeconds" : int(self.tasktype.auto_approve.total_seconds()),
+            "AssignmentDurationInSeconds" : int(self.tasktype.assignment_duration.total_seconds()),
             "Expiration" : self.expires,
             "Keywords" : self.serialize_keywords(),
             "HITStatus" : self.get_status_display(),
