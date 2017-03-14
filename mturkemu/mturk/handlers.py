@@ -219,7 +219,8 @@ class MTurkHandlers(object):
         try:
             qual = Qualification.objects.get(
                 requester = requester,
-                name=name
+                name=name,
+                dispose=False,
             )
             raise RequestError("Name is Not Unique", 1)
         except Qualification.DoesNotExist:
