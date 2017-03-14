@@ -56,12 +56,18 @@ class QuestionValidator(object):
             raise Exception("Unknown Question Type: %s" % name)
         return(name)
 
+    def parse(self, name, content):
+        """
+        """
+        parser = SCHEMAS[name]
+        root = etree.fromstring(content, parser)
+        return(root)
+
     def validate(self, name, content):
         """
         Validate a question content XML object against
         known schemas and return the name of the xml object.
         Throws an exception is validation fails.
         """
-        parser = SCHEMAS[name]
-        root = etree.fromstring(content, parser)
+        root = self.parse(name, content)
         return( name )
