@@ -30,8 +30,6 @@ def cache_schemas():
         filepath = SCHEMA_FILES[name]
         with open(filepath, "rb") as f:
             schemaXml = etree.parse(f)
-            #content = f.read()
-            #schemaXml = etree.XML(content)
             schema = etree.XMLSchema(schemaXml)
             ret[name] = etree.XMLParser(schema=schema)
     return(ret)
@@ -43,12 +41,13 @@ class QuestionValidator(object):
     """
     """
 
-    def get_root_element_name(content):
+    def get_root_element_name(self, content):
         # @todo - I want to replace this with a sax parser
         #   so that we don't have to parse the tree twice
         #   to determine the root node name
         root = etree.fromstring(content)
-        return(root.tag)
+        tag = etree.QName(root.tag)
+        return(tag.localname)
 
 
     def determine_type(self, content):
