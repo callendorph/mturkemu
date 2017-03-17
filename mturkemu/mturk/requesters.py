@@ -10,10 +10,12 @@ from django.conf import settings
 from django.core.exceptions import SuspiciousOperation, PermissionDenied
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
+from django.db.models import Q
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from mturk.models import *
 from mturk.utils import *
+from mturk.fields import *
 
 import random
 import string
@@ -64,8 +66,8 @@ class RequesterQualRequestsPage(LoginRequiredMixin, MTurkBaseView):
         offset, count = self.get_list_form(request)
 
         reqList = QualificationRequest.objects.filter(
-            qualification__requester = requester,
-            rejected = False
+            Q(qualification__requester = requester) &
+            ~Q(state = QualReqStatusField.REJECTED)
         ).order_by("-last_request")
 
         reqsPage = self.create_page(offset, count, reqList)
@@ -106,7 +108,7 @@ class RequesterQualRequestReject(LoginRequiredMixin, MTurkBaseView):
         req_id = int(req_id)
         req = get_object_or_404(QualificationRequest, pk=req_id)
 
-        req.rejected = True
+        req.state = QualReqStatusField.REJECTED
         req.reason = "Rejected via Website"
         req.save()
 

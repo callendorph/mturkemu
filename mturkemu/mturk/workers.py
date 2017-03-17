@@ -9,13 +9,14 @@
 from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views import View
+from django.db.models import Q
 from django.contrib import messages
 from django.utils import timezone
 from django.contrib.auth.mixins import LoginRequiredMixin
 
 from mturk.models import *
 from mturk.utils import MTurkBaseView
-
+from mturk.fields import *
 
 class WorkerHomePage(LoginRequiredMixin, MTurkBaseView):
     """
@@ -129,7 +130,7 @@ class WorkerRequestQual(LoginRequiredMixin, MTurkBaseView):
     def handle_requests(self, worker, qual):
         rejects = qual.qualificationrequest_set.filter(
             worker = worker,
-            rejected = True
+            state = QualReqStatusField.REJECTED
             ).order_by("-last_request")
         if ( rejects.exists() ):
             if ( qual.retry_active ):
@@ -151,9 +152,10 @@ class WorkerRequestQual(LoginRequiredMixin, MTurkBaseView):
         # There are no rejected requests present -
         # Let's see if there are any active requests present
         reqs = qual.qualificationrequest_set.filter(
-            worker = worker,
-            rejected = False
+            Q( worker = worker ) &
+            ~ Q( state = QualReqStatusField.REJECTED )
         )
+
         if ( reqs.exists() ):
             raise QualHasActiveRequest()
 
@@ -221,7 +223,11 @@ class WorkerRequestQual(LoginRequiredMixin, MTurkBaseView):
             else:
                 createParams["value"] = qual.auto_grant_value
 
-            grant = QualificationGrant.objects.create( **createParams)
+            grant = QualificationGrant.objects.create( **createParams )
+
+            req.state = QualReqStatusField.APPROVED
+            req.save()
+
             messages.info(
                 request, "Qualification Granted for %s" % qual.aws_id
             )
@@ -230,6 +236,8 @@ class WorkerRequestQual(LoginRequiredMixin, MTurkBaseView):
             # complete before the qualification will be granted.
             return(redirect("worker-qual-test", qual_id = qual_id))
         else:
+            req.state = QualReqStatusField.PENDING
+            req.save()
             messages.info(
                 request, "Qualification Request has been created. The Requester will respond with a decision."
                 )

@@ -17,13 +17,8 @@
         <tr>
           <td> {{request.qualification.name}} </td>
           <td> {{request.last_request}} </td>
-          {% if request.rejected %}
-          <td> Rejected </td>
+          <td> {{ request.get_state_display }} </td>
           <td> {{request.reason}} </td>
-          {% else %}
-          <td> Pending </td>
-          <td> </td>
-          {% endif %}
         </tr>
         {% empty %}
         <tr>

@@ -237,9 +237,34 @@ class QualificationRequest(models.Model):
     qualification = models.ForeignKey(Qualification, on_delete=models.CASCADE)
 
     last_request = models.DateTimeField()
-    rejected = models.BooleanField(default=False)
+
+    # The state of this request - indicates what actions the
+    # worker/requester has completed in relation to this request.
+    state = QualReqStatusField()
+
+    # Answer contains the response data from the Worker when they
+    # complete the Qualification test.
+    answer = models.TextField(blank=True)
+    last_submitted = models.DateTimeField(null=True)
+
+    #rejected = models.BooleanField(default=False)
+    # Rejection Reason String
     MAX_REASON_LEN = 256
     reason = models.CharField(max_length=MAX_REASON_LEN, blank=True)
+
+
+    # Qual Request State methods
+    def is_idle(self):
+        return( self.state == QualReqStatusField.IDLE )
+
+    def is_pending(self):
+        return( self.state == QualReqStatusField.PENDING )
+
+    def is_rejected(self):
+        return( self.state == QualReqStatusField.REJECTED )
+
+    def is_approved(self):
+        return( self.state == QualReqStatusField.APPROVED )
 
     def __str__(self):
         return("<%s...>" % self.aws_id[0:6])

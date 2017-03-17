@@ -15,6 +15,7 @@ from django.utils import timezone
 from mturk.models import *
 from mturk.taskviews import CreateTaskType
 from mturk.errors import *
+from mturk.fields import *
 
 from datetime import timedelta
 
@@ -433,12 +434,13 @@ class MTurkHandlers(object):
         if ( req.qualification.requester != requester ):
             raise PermissionDenied()
 
-        req.rejected = True
-        try:
-            reason = kwargs["Reason"]
-            req.reason = reason
-        except KeyError:
-            pass
+        if ( not req.is_pending() ):
+            # @todo - check if the server responds like this when
+            #    the request is idle or already approved/rejected
+            raise RequestError("Invalid Qualification State", 20)
+
+        req.state = QualReqStatusField.REJECTED
+        req.reason = kwargs.get("Reason", "")
 
         req.save()
 
@@ -694,6 +696,9 @@ class MTurkHandlers(object):
         if ( req.qualification.requester != requester ):
             raise PermissionDenied()
 
+        if ( req.state != QualReqStatusField.PENDING ):
+            raise RequestError("Qual Request in Wrong State to Approve", 21)
+
         # First check if there is a qualification grant for this
         # worker with these parameters, if so we will update it
 
@@ -713,9 +718,8 @@ class MTurkHandlers(object):
 
         grant.save()
 
-        # Cleanup the request object because it is no longer
-        # necessary
-        req.delete()
+        req.state = ReqQualStatusField.APPROVED
+        req.save()
 
         return({})
 

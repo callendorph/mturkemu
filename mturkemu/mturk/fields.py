@@ -103,6 +103,31 @@ class TaskReviewStatusField(models.CharField, RemoveKeysMixin):
             default = TaskReviewStatusField.NOT_REVIEWED
             )
 
+class QualReqStatusField(models.CharField, RemoveKeysMixin):
+    """
+    Qualification Request Status - This indicates the state of
+    a request from a worker for a qualification.
+    """
+    IDLE = "I"
+    PENDING = "P"
+    APPROVED = "A"
+    REJECTED = "R"
+
+    STATES = (
+        (IDLE, "Idle"),
+        (PENDING, "Pending"),
+        (APPROVED, "Approved"),
+        (REJECTED, "Rejected")
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.removeKeys(kwargs)
+        super().__init__(
+            max_length = 1,
+            choices = QualReqStatusField.STATES,
+            default = QualReqStatusField.IDLE
+            )
+
 class AssignmentStatusField(models.CharField, RemoveKeysMixin):
     """
     Asignment Status Field
