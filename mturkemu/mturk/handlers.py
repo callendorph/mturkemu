@@ -15,6 +15,7 @@ from django.utils import timezone
 from mturk.models import *
 from mturk.taskviews import CreateTaskType
 from mturk.errors import *
+from mturk.questions import QuestionValidator
 from mturk.fields import *
 
 from datetime import timedelta
@@ -301,9 +302,10 @@ class MTurkHandlers(object):
         qual = Qualification.objects.create(**createParams)
         qual.save()
 
-        return({
+        resp = {
            "QualificationType" : qual.serialize()
-        })
+        }
+        return(resp)
 
     def GetFileUploadURL(self, **kwargs):
         raise NotImplementedError("File Upload Not Implemented Yet")
