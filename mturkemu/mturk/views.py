@@ -54,11 +54,11 @@ class MTurkMockAPI(View):
         return( content[0], content[1] )
 
     def parseAuthHeader(self, authHeader):
-        comps = filter( lambda x: len(x)>0, re.split(r"[ ,]", authHeader))
+        comps = [x for x in re.split(r"[ ,]", authHeader) if len(x) > 0 ]
         # Some of the components are key value pairs, others arent
         params = {}
         for comp in comps:
-            m = re.match(r"([^=]+)=([^,=])", comp)
+            m = re.match(r"([^=]+)=([^,=]+)", comp)
             if m:
                 key = m.group(1)
                 val = m.group(2)
@@ -71,7 +71,7 @@ class MTurkMockAPI(View):
         return(params)
 
     def parseCredentials(self, cred):
-        comps = filter(lambda x: len(x) > 0, re.split(r"[/]", cred))
+        comps = [x for x in re.split(r"[/]", cred) if len(x) > 0 ]
         if ( len(comps) < 3 ):
             raise Exception("Credential Parameter Is missing Components")
 
