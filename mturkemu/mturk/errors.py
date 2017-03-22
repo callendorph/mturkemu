@@ -15,3 +15,7 @@ class RequestError(Exception):
             "Message" : self.msg,
             "TurkErrorCode" : "%d" % self.code,
         })
+
+class InvalidTagError(Exception):
+    def __init__(self, tag):
+        super().__init__("Invalid Tag: %s" % tag.localname)
