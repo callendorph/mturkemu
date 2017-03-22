@@ -14,13 +14,7 @@
         Below you can select to interact with the MTurk Emulator
         as either a worker or a requester.
       </p>
-      {% for message in messages %}
-      <div class="alert {{ message.tags }}">
-        <p>
-          {{message}}
-        </p>
-      </div>
-      {% endfor %}
+      {% include "comps/server_msgs.html" with messages=messages %}
     </div>
   </div>
   <div class="row">
