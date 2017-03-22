@@ -8,17 +8,9 @@
 <div class="row">
   <div class="col-sm-12 col-md-12">
     <h1> Worker Qualifications </h1>
-    <ol class="breadcrumb">
-      <li>Id: {{ worker.aws_id }}</li>
-    </ol>
+    {% include "worker/worker_id.html" with worker=worker %}
 
-    {% for message in messages %}
-    <div class="alert {{ message.tags }}">
-      <p>
-        {{message}}
-      </p>
-    </div>
-    {% endfor %}
+    {% include "comps/server_msgs.html" with messages=messages %}
 
     {% include "worker/qual_table.html" with quals=quals %}
   </div>
