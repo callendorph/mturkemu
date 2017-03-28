@@ -1,0 +1,20 @@
+{% extends "worker/root.html" %}
+
+{% block sidebar %}
+{% include "worker/sidebar.html" %}
+{% endblock %}
+
+{% block tab %}
+<div class="row">
+  <div class="col-sm-12 col-md-12">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h2>Qualification Exam</h2>
+      </div>
+      <div class="panel-body">
+        {% include "worker/quesform/form.html" with form=form %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

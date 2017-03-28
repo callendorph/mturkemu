@@ -1,0 +1,13 @@
+<div class="form-group">
+  {% if question.content %}
+  {% include "worker/quesform/contenttype.html" with content=question.content %}
+  {% endif %}
+  {% if question.answer.type == "FreeTextAnswer" %}
+  {% include "worker/quesform/freetextanswer.html" with question=question %}
+  {% elif question.answer.type == "SelectionAnswer" %}
+  {% include "worker/quesform/selections.html" with question=question%}
+  {% elif question.answer.type == "FileUploadAnswer" %}
+  {% include "worker/quesform/uploadanswer.html" with question=question %}
+  {% else %}
+  {% endif %}
+</div>

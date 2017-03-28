@@ -234,7 +234,7 @@ class WorkerRequestQual(LoginRequiredMixin, MTurkBaseView):
         elif ( qual.has_test ):
             # This qualification has a test that the worker must
             # complete before the qualification will be granted.
-            return(redirect("worker-qual-test", qual_id = qual_id))
+            return(redirect("worker-qual-test", req_id = req.id))
         else:
             req.state = QualReqStatusField.PENDING
             req.save()
@@ -244,26 +244,6 @@ class WorkerRequestQual(LoginRequiredMixin, MTurkBaseView):
 
         return(redirect( "worker-quals" ) )
 
-
-class WorkerCompleteQualTest(LoginRequiredMixin, MTurkBaseView):
-    def get(self, request, qual_id):
-        """
-        We need to pull the test out of the qualification, parse
-        it and then generate the content that will be used in
-        the test form.
-        """
-        return(render(request, "worker/qual_test.html", cxt))
-
-    def post(self, request, qual_id):
-        """
-        The worker submits the answer to the test via POST
-        We need to then dynamically create a form object to
-        validate the input and then compare against an
-        answer key if available.
-        if No answer key, then requester must manually approve
-        if answer key, we can auto generate a qualification grant.
-        """
-        return(redirect("worker-quals"))
 
 class WorkerQualRequestsPage(LoginRequiredMixin, MTurkBaseView):
     def get(self, request):

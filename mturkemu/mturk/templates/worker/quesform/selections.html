@@ -1,0 +1,57 @@
+<div>
+  <p> {{question.name}} </p>
+
+  {% if question.answer.spec.style == "radiobutton" %}
+  {% for item in question.answer.spec.selections.items %}
+  <div class="radio">
+    <label>
+      <input type="radio" name="{{question.ques_id}}" id="{{item.sel_id}}" value="{{item.sel_id}}">
+      {{item.data}}
+    </label>
+  </div>
+  {% endfor %}
+  {% elif question.answer.spec.style == "checkbox" %}
+  {% for item in question.answer.spec.selections.items %}
+  <div class="checkbox">
+    <label>
+      <input type="checkbox" name="{{question.ques_id}}" id="{{item.sel_id}}" value="{{item.sel_id}}">
+      {{item.data}}
+    </label>
+  </div>
+  {% endfor %}
+  {% elif question.answer.spec.style == "list" %}
+  <select multiple class="form-control">
+    {% for item in question.answer.spec.selections.items %}
+    <option>{{item.data}}</option>
+    {% endfor %}
+  </select>
+  {% elif question.answer.spec.style == "dropdown" %}
+  <select class="form-control">
+    {% for item in question.answer.spec.selections.items %}
+    <option>{{item.data}}</option>
+    {% endfor %}
+  </select>
+  {% elif question.answer.spec.style == "combobox" %}
+  <div class="alert alert-danger">
+    <p> ComboBox Type Not Implemented Yet! </p>
+  </div>
+  {% elif question.answer.spec.style == "multichooser" %}
+  <div class="alert alert-danger">
+    <p> MultiChooser Type Not Implemented Yet! </p>
+  </div>
+  {% else %}
+  <div class="alert alert-danger">
+    <p> Unknown Style Type for Selection Answer </p>
+  </div>
+  {% endif %}
+
+  {% if question.answer.spec.selections.other %}
+  <label for="other_{{question.ques_id}}">
+    Other:
+  </label>
+  <input type="text" name="other_{{question.ques_id}}"
+         class="form-control"
+         id="other_{{question.ques_id}}"/>
+  {% endif %}
+
+</div>

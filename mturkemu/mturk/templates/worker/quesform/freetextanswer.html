@@ -1,0 +1,8 @@
+{% if question.name %}
+<label for="{{question.ques_id}}">
+  {{question.name}}
+</label>
+{% endif %}
+<input type="text" name="{{question.ques_id}}"
+       class="form-control"
+       id="{{question.ques_id}}"/>

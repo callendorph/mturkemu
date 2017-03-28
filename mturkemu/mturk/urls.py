@@ -8,14 +8,15 @@
 from django.conf.urls import url
 
 from mturk.workers import *
+from mturk.qualview import *
 
 workerPatterns = [
     url('^home/$', WorkerHomePage.as_view(), name="worker-home"),
     url('^quals/$', WorkerQualsPage.as_view(), name="worker-quals"),
     url('^quals/(?P<qual_id>[0-9]+)/$', WorkerQualInfoPage.as_view(), name="worker-qual-info"),
     url('^quals/(?P<qual_id>[0-9]+)/request/$', WorkerRequestQual.as_view(), name="worker-qual-request"),
-    url('^quals/(?P<qual_id>[0-9]+)/test/$', WorkerCompleteQualTest.as_view(), name="worker-qual-test"),
     url('^quals/reqs/$', WorkerQualRequestsPage.as_view()),
+    url('^quals/reqs/(?P<req_id>[0-9]+)/test/$', WorkerCompleteQualTest.as_view(), name="worker-qual-test"),
     url('^quals/grants/$', WorkerQualGrantsPage.as_view()),
     url('^tasks/$', WorkerTasksPage.as_view(), name="worker-tasks"),
     url('^settings/$', WorkerSettingsPage.as_view(), name="worker-settings"),

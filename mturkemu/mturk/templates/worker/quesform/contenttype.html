@@ -1,0 +1,27 @@
+<div>
+{% for elem in content.content %}
+  {% if elem.type == "Title" %}
+  <h2> {{elem.text}} </h2>
+  {% elif elem.type == "Text" %}
+  <p> {{elem.text}} </p>
+  {% elif elem.type == "FormattedContent" %}
+  {{elem.text}}
+  {% elif elem.type == "List" %}
+  <ul>
+    {% for item in elem.items %}
+    <li> {{item}} </li>
+    {% endfor %}
+  </ul>
+  {% elif elem.type == "Binary" %}
+  <p> 'Binary' Data Not Implemented</p>
+  {% elif elem.type == "Application" %}
+  <p> 'Application' Data Not Implemented</p>
+  {% elif elem.type == "EmbeddedBinary" %}
+  <p> 'EmbeddedBinary' Data Not Implemented</p>
+  {% else %}
+  <div class="alert alert-danger">
+    Invalid Data Type in QuestionForm Template: {{elem.type}}
+  </div>
+  {% endif %}
+{% endfor %}
+</div>

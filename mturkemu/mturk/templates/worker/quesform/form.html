@@ -1,0 +1,19 @@
+<div>
+  <form method="POST" action="{{form.url}}">
+    {% csrf_token %}
+
+    {% for content in form.contents %}
+      {% if content.type == "ContentType" %}
+        {% include "worker/quesform/contenttype.html" with content=content %}
+      {% elif content.type == "Question" %}
+        {% include "worker/quesform/question.html" with question=content %}
+      {% else %}
+        <div class="alert alert-danger">
+          Invalid Content Object for QuestionForm
+        </div>
+      {% endif %}
+    {% endfor %}
+
+    <input class="btn btn-default" type="submit" value="Submit" />
+  </form>
+</div>
