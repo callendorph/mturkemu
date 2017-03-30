@@ -140,7 +140,9 @@ class WorkerRequestQual(LoginRequiredMixin, MTurkBaseView):
                 if ( timestamp > nextReqTime ):
                     # Worker is allowed to re-request now
                     req.last_request = timestamp
-                    req.rejected = False
+                    # @todo - fix state here
+                    # req.rejected = False
+                    req.answer = ""
                     req.reason = ""
                     req.save()
                     return(req)
