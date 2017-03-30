@@ -180,3 +180,32 @@ class AnswerKey(object):
                 self.qualmap = QualMapping(child)
             else:
                 raise InvalidTagError(tag)
+
+    def score(self, form):
+        """
+        Compare the answers submitted by a worker with the
+        answer and score it with a qualification value.
+        """
+        total = 0
+        for answer in self.answers:
+            try:
+                obsVal = form.cleaned_data[answer.ques_id]
+                print("Ques[%s]: Answer: %s" % (answer.ques_id, obsVal))
+            except KeyError:
+                raise Exception("Missing Answer for Question: %s" % answer.ques_id)
+            hasMatch = False
+            obsSet = set(obsVal)
+            for opt in answer.opts:
+                expSet = set(opt.sel_id_list)
+                if ( expSet == obsSet ):
+                    total += opt.score
+                    hasMatch = True
+
+            if ( not hasMatch ):
+                total += answer.defaultScore
+
+        # Now determine if we need to do a mapping of the score
+        if ( self.qualmap is not None ):
+            total = self.qualmap.map_score(total)
+
+        return(total)

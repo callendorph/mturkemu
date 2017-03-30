@@ -115,4 +115,52 @@ class WorkerCompleteQualTest(LoginRequiredMixin, MTurkBaseView):
 
         # Now let's score the answer from the worker if there is an
         # answer key.
-        raise NotImplementedError()
+        if ( len(req.qualification.answer) > 0 ):
+            ans = AnswerKey(req.qualification.answer)
+
+            grantQual = False
+            grantScore = 0
+
+            try:
+                grantScore = ans.score(form)
+                grantQual = True
+                req.state = QualReqStatusField.APPROVED
+            except Exception as exc:
+                # The form Answer was incorrect
+                # we must reject the qualification request
+                # for this worker
+                logger.error("Qualifcation Test Scoring Fails: %s" % str(exc))
+                logger.error("Traceback: %s" % traceback.format_exc() )
+
+                req.state = QualReqStatusField.REJECTED
+                message.error(
+                    request,
+                    "Failed to acquire Qualification '%s': %s" %
+                    (req.qualification.name, str(exc))
+                    )
+
+            if ( grantQual ):
+                logger.info("Qualification Test Scored: %d" % grantScore)
+
+                grant = QualificationGrant.objects.create(
+                    worker = worker,
+                    qualification = req.qualification,
+                    value = grantScore,
+                )
+
+                messages.info(
+                    request,
+                    "Successfully acquired a grant for Qualification '%s'" %
+                    req.qualification.name
+                )
+        else:
+            # There was no answer key - so the requester must manually
+            # approve
+            req.state = QualReqStatusField.PENDING
+
+        # Save the Worker's answer
+        req.answer = form.generate_worker_answer()
+        req.last_submitted = timezone.now()
+        req.save()
+
+        return(redirect("worker-quals"))

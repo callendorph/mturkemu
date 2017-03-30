@@ -409,6 +409,8 @@ class QuestionForm(object):
         self.contents = []
         self.parse(root)
 
+        self.cleaned_data = None
+        self.errors = None
 
     def parse(self, root):
         for i,child in enumerate(root):
@@ -422,3 +424,78 @@ class QuestionForm(object):
 
     def get_questions(self):
         return( [x for x in self.contents if x.type == "Question" ] )
+
+    def get_fields(self):
+        fields = {}
+        for ques in self.get_questions():
+            fields.update( ques.fields)
+        return( fields )
+
+    def process(self, data):
+        """
+        Process the POSTed data by validating all of the fields.
+        """
+        fields = self.get_fields()
+
+        errors = {}
+        cleaned_data = {}
+
+        for name, field in fields.items():
+            try:
+                value = field.widget.value_from_datadict(data, [], name)
+                value = field.clean(value)
+                cleaned_data[name] = value
+            except ValidationError as exc:
+                namedErrors = errors.get(name, [])
+                namedErrors.append(exc)
+                errors[name] = namedErrors
+
+        self.errors = errors
+
+        self.cleaned_data = cleaned_data
+        return(cleaned_data)
+
+    def is_valid(self):
+        if ( self.errors is not None ):
+            return( len(self.errors.keys()) == 0 )
+        else:
+            raise Exception("Must call 'process' before invoking is_valid")
+
+    def generate_worker_answer(self):
+        """
+        Generate the XML-based QuestionFormAnswers object from the
+        data that was processed. This gets stored with the request.
+        """
+        questions = self.get_questions()
+
+        root = etree.Element("QuestionFormAnswers", xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2005-10-01/QuestionFormAnswers.xsd")
+
+        for question in questions:
+            ans = etree.SubElement(root, "Answer")
+            qId = etree.SubElement(ans, "QuestionIdentifier")
+            qId.text = question.ques_id
+            if ( question.answer.type == "FreeTextAnswer" ):
+                ftext = etree.SubElement(ans, "FreeText")
+                ftext.text = self.cleaned_data[question.ques_id]
+            elif ( question.answer.type == "SelectionAnswer" ):
+                selIds = self.cleaned_data[question.ques_id]
+                other = self.cleaned_data.get("other_" + question.ques_id, None)
+                for selId in selIds:
+                    selElem = etree.SubElement(ans, "SelectionIdentifier")
+                    selElem.text = selId
+                if other is not None:
+                    otherElem = etree.SubElement(ans, "OtherSelectionText")
+                    otherElem.text = other
+            elif ( question.answer.type == "FileUploadAnswer" ):
+                sizeElem = etree.SubElement(ans, "UploadedFileSizeInBytes")
+                sizeElem.text = "0"
+                fileKey = etree.SubElement(ans, "UploadedFileKey")
+                fileKey.text = "NotImplemented"
+            else:
+                raise Exception("Invalid Answer Type: %s" % question.answer.type)
+
+        # We now have a XML object for our QuestionFormAnswer
+
+        content = etree.tostring(root)
+
+        return(content.decode("utf-8"))
