@@ -70,4 +70,18 @@ class QuestionValidator(object):
         Throws an exception is validation fails.
         """
         root = self.parse(name, content)
+        if ( name == "QuestionForm" ):
+            # We need to be a little careful and make sure that the
+            # user hasn't tried to insert a key that might clash
+            # with our internal form field names.
+            ForbiddenKeys = ["csrfmiddlewaretoken"]
+            for child in root:
+                tag = etree.QName(child.tag)
+                if ( tag.localname == "Question" ):
+                    for c in child:
+                        tag = etree.QName(child.tag)
+                        if ( tag.localname == "QuestionIdentifier" ):
+                            ques_id = child.text
+                            if ( ques_id in ForbiddenKeys ):
+                                raise Exception("Invalid Question Identifier: Forbidden Value")
         return( name )
