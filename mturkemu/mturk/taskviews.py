@@ -83,7 +83,8 @@ class CreateTaskType(object):
         Return a list of QualificationRequirement objects
         """
         ret = []
-        for qual in self.request["QualificationRequirements"]:
+        reqQuals = self.request.get("QualificationRequirements", [])
+        for qual in reqQuals:
             compStr = qual["Comparator"]
             compId = QualComparatorField.convert_display_to_value(compStr)
 
