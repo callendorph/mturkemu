@@ -9,6 +9,9 @@
 #
 
 from django.conf import settings
+
+from mturk.errors import *
+
 from lxml import etree
 
 try:
@@ -35,6 +38,51 @@ def cache_schemas():
     return(ret)
 
 SCHEMAS = cache_schemas()
+
+
+class HTMLQuestion(object):
+    """
+    HTMLQuestion XML object for HIT questions.
+    """
+    def __init__(self, root):
+
+        self.html = ""
+        self.height = 0
+
+        self.parse(root)
+
+    def parse(self, root):
+        for child in root:
+            tag = etree.QName(child.tag)
+            if ( tag.localname == "HTMLContent" ):
+                # XML CDATA section is seemless transferred to
+                # the child.text
+                self.html = child.text
+            elif ( tag.localname == "FrameHeight" ):
+                self.height = int(child.text)
+            else:
+                raise InvalidTagError(tag)
+
+class ExternalQuestion(object):
+    """
+    ExternalQuestion XML object for questions in HITs
+    """
+    def __init__(self, root):
+        self.url = ""
+        self.height = 0
+
+        self.parse(root)
+
+
+    def parse(self, root):
+        for child in root:
+            tag = etree.QName(child.tag)
+            if ( tag.localname == "ExternalURL" ):
+                self.url = child.text
+            elif ( tag.localname == "FrameHeight" ):
+                self.height = int(child.text)
+            else:
+                raise InvalidTagError(tag)
 
 
 class QuestionValidator(object):
