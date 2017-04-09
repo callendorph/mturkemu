@@ -1,0 +1,12 @@
+<script>
+  // Load new page onload in the frame.
+  var loadCount = 0;
+  var onFrameLoad = function() {
+    loadCount+=1;
+    console.log("Frame Loaded: " + loadCount);
+  };
+</script>
+
+<iframe src="{{ext.url}}" id="mturk" title="Question"
+        height="{{ext.height}}" scrolling="yes" onLoad="onFrameLoad">
+</iframe>

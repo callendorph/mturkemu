@@ -1,0 +1,47 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3> Tasks </h3>
+  </div>
+  <div class="panel-body">
+
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th rowspan="2"> Title </th>
+          <th rowspan="2"> Status </th>
+          <th rowspan="1" colspan="4"> Assignments </th>
+          <th rowspan="2"> Expires </th>
+        </tr>
+        <tr>
+          <th>Available</th>
+          <th>Pending</th>
+          <th>Completed</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for task in tasks.list %}
+        {% with stats=task.compute_assignment_stats %}
+        <tr onclick="window.document.location='/requester/tasks/{{task.id}}/';">
+          <td> {{task.tasktype.title}} </td>
+          <td> {{task.get_status_display}} </td>
+          <td> {{stats.0}} </td>
+          <td> {{stats.1}} </td>
+          <td> {{stats.2}} </td>
+          <td> {{task.max_assignments}} </td>
+          <td> {{task.expires}} </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr>
+          <td colspan="7"> No Tasks Present </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+  <div class="panel-footer">
+    {% include "comps/pager.html" with url="/requester/tasks/" page=tasks %}
+  </div>
+</div>

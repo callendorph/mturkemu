@@ -12,6 +12,7 @@ from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 
 from mturk.views import MTurkMockAPI, MTurkCreateUser
+from mturk.workers import WorkerExternalSubmit
 from mturk.urls import workerPatterns, requesterPatterns
 
 urlpatterns = [
@@ -28,6 +29,11 @@ urlpatterns = [
     # UI for the MTurk Emulator
     url(r'^worker/', include(workerPatterns)),
     url(r'^requester/', include(requesterPatterns)),
+
+    # MTurk API Endpoint for ExternalQuestion and HTMLQuestion
+    # Objects
+    url(r'^mturk/externalSubmit/$', WorkerExternalSubmit.as_view(),
+        name="worker-ext-submit"),
 
 ]
 

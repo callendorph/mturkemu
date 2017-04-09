@@ -1,0 +1,47 @@
+{% with assignments=task.submitted_assignments %}
+<div class="panel panel-default">
+  <div class="panel-heading">
+    {% if assignments %}
+    <div class="pull-right" style="display: inline">
+      <a class="btn btn-success" href="/requester/tasks/{{task.id}}/assign/approve/">
+        Approve All
+      </a>
+      <a class="btn btn-danger" href="/requester/tasks/{{task.id}}/assign/reject/">
+        Reject All
+      </a>
+    </div>
+    {% endif %}
+    <h2> Submitted Assignments </h2>
+  </div>
+
+  <div clas="panel-body">
+    <p>
+      These assignments need to be approved or rejected.
+    </p>
+
+    {% for assignment in assignments %}
+    <div class="panel panel-default" style="margin: 20px">
+      <div class="panel-body">
+      <h3> Assignment Parameters </h3>
+      {% include "comps/property_table.html" with props=assignment.prop_table %}
+      <h3> Answers </h3>
+      {% include "comps/qformanswer_table.html" with answers=assignment.get_answer_display %}
+      <h3> Approve / Reject </h3>
+      <a class="btn btn-success" href="/requester/tasks/{{task.id}}/assign/{{assignment.id}}/approve/">
+        Approve
+      </a>
+      <a class="btn btn-danger" href="/requester/tasks/{{task.id}}/assign/{{assignment.id}}/reject/">
+        Reject
+      </a>
+      </div>
+    </div>
+    {% empty %}
+    <div class="well" style="margin:20px">
+      No Submitted Assignments are Present!
+    </div>
+    {% endfor %}
+
+  </div>
+</div>
+
+{% endwith %}

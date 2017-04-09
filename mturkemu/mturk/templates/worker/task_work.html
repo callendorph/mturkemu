@@ -1,0 +1,27 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3> Task </h3>
+    {% if assignment.is_accepted %}
+    <a class="btn btn-default" href="/worker/tasks/{{task.id}}/return/">
+      Return
+    </a>
+    {% else %}
+    <a class="btn btn-default" href="/worker/tasks/{{task.id}}/accept/">
+      Accept
+    </a>
+    {# MTurk has a 'Skip' button - but I don't know if this is necessary #}
+    {% endif %}
+  </div>
+  <div class="panel-body">
+
+    {# Task Work Content Goes Here - Depends on the type of tasks #}
+    {% if quesType == "QuestionForm" %}
+    {% include "worker/quesform/form.html" with form=form %}
+    {% else %}
+    {% include "worker/iframe_question.html" with task=task ext=ext %}
+    {% endif %}
+
+
+    {#  I want to put the content of the task to complete here.  #}
+  </div>
+</div>

@@ -1,0 +1,28 @@
+{# User supplies the 'answers' variable which is an array of answer #}
+{# objects from the 'assignment.get_answer_display' method #}
+<table class="table table-hover">
+  <thead>
+    <tr>
+      <th>Question</th>
+      <th>Response</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for answer in answers %}
+    <tr>
+      <td> {{answer.QuestionIdentifier}} </td>
+      <td>
+        {{answer.FreeText}}
+        {{answer.SelectionIdentifier}}
+        {{answer.OtherSelectionText}}
+        {{answer.UploadedFileKey}}
+        {{answer.UploadedFileSizeInBytes}}
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="2"> No Answers Provided </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

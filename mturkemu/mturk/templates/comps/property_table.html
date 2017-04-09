@@ -1,0 +1,20 @@
+<table class="table">
+  <thead>
+    <tr>
+      <th> Property </th>
+      <th> Value </th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for info in props %}
+    <tr>
+      <td> {{info.label}} </td>
+      <td> {{info.value}} </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="2"> ERROR: No Properties Present </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

@@ -6,14 +6,18 @@
 #
 
 from django.db import models
+from django.db.models import Q
 from django.core.validators import validate_comma_separated_integer_list
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 from mturk.fields import *
+from mturk.questions import *
+from mturk.quesformanswer import QFormAnswer
 
 from datetime import timedelta
 
@@ -48,6 +52,10 @@ class Worker(models.Model):
     active = models.BooleanField(default=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now=False, auto_now_add = True)
+
+    # HIT Statistics
+
+    returned_hits = models.IntegerField(default=0)
 
     def __str__(self):
         return("<%s, %s...>" % (self.user.username, self.aws_id[0:5]))
@@ -309,6 +317,12 @@ class QualificationGrant(models.Model):
     def __str__(self):
         return("<worker=%s,qual=%s>" % (self.worker, self.qualification))
 
+class InvalidQualRequirementError(Exception):
+    def __init__(self):
+        super().__init__(
+            "Invalid Qualification Requirement - must have int values or locales - has neither"
+        )
+
 class QualificationRequirement(models.Model):
     """
     Qualification Requirements are used to control the constraints
@@ -327,6 +341,121 @@ class QualificationRequirement(models.Model):
 
     required_to_preview = models.BooleanField(default=False)
 
+    def get_values_display(self):
+        vals = self.get_int_values()
+        if ( len(vals) > 0 ):
+            return(vals)
+        else:
+            ret = []
+            for loc in self.locale_values:
+                ret.append( str(loc) )
+            return(ret)
+
+    def is_not_exists(self):
+        return( self.comparator == QualComparatorField.DOES_NOT_EXIST )
+
+    def get_int_values(self):
+        comps = self.int_values.split(",")
+        comps = [ x.strip() for x in comps if len(x) > 0]
+        return( [ int(x) for x in comps ] )
+
+    def check_lt(self, grant):
+        if ( grant is None ):
+            return(False)
+        vals = self.get_int_values()
+        return( grant.value < vals[0] )
+
+    def check_lte(self, grant):
+        if ( grant is None ):
+            return(False)
+        vals = self.get_int_values()
+        return( grant.value <= vals[0] )
+
+    def check_gt(self, grant):
+        if ( grant is None ):
+            return(False)
+        vals = self.get_int_values()
+        return( grant.value > vals[0] )
+
+    def check_gte(self, grant):
+        if ( grant is None ):
+            return(False)
+        vals = self.get_int_values()
+        return( grant.value >= vals[0] )
+
+    def check_equal(self, grant):
+        if ( grant is None ):
+            return(False)
+        vals = self.get_int_values()
+        if ( len(vals) > 0 ):
+            return( grant.value == vals[0] )
+        else:
+            if ( self.locale_values.all().count() == 0 ):
+                raise InvalidQualRequirementError()
+
+            if ( grant.locale is None ):
+                raise Exception("Grant must have a locale!")
+
+            loc = self.locale_values.all()[0]
+            return ( grant.locale == loc )
+
+    def check_not_equal(self, grant):
+        if ( grant is None ):
+            return(False)
+        return( not self.check_equal(grant) )
+
+    def check_exists(self, grant):
+        return(grant is not None)
+
+    def check_does_not_exist(self, grant):
+        return( grant is None )
+
+    def check_in_set(self, grant):
+        if ( grant is None ):
+            return(False)
+
+        if ( self.locale_values.all().count() == 0 ):
+            vals = self.get_int_values()
+            if ( len(vals) == 0 ):
+                raise InvalidQualRequirementError()
+
+            valSet = set(vals)
+            return( grant.value in valSet )
+        else:
+            return(
+                self.locale_values.filter(
+                    pk = grant.locale.id
+                ).exists()
+            )
+
+    def check_not_in_set(self, grant):
+        if ( grant is None ):
+            return(False)
+
+        return( not self.check_in_set(grant) )
+
+
+    def check_grant(self, grant):
+        """
+        Check if a particular grant meets the specifications of this
+        qual requirement.
+        """
+        check_methods = {
+            QualComparatorField.LESS_THAN: self.check_lt,
+            QualComparatorField.LESS_THAN_OR_EQUAL: self.check_lte,
+            QualComparatorField.GREATER_THAN: self.check_gt,
+            QualComparatorField.GREATER_THAN_OR_EQUAL: self.check_gte,
+            QualComparatorField.EQUAL_TO: self.check_equal,
+            QualComparatorField.NOT_EQUAL_TO: self.check_not_equal,
+            QualComparatorField.EXISTS: self.check_exists,
+            QualComparatorField.DOES_NOT_EXIST: self.check_does_not_exist,
+            QualComparatorField.IN_SET: self.check_in_set,
+            QualComparatorField.NOT_IN_SET: self.check_not_in_set,
+        }
+
+        method = check_methods[self.comparator]
+        return( method(grant) )
+
 class TaskType(KeywordMixinModel):
     """
     TaskTypes make it easier to create a particular Task with common
@@ -343,6 +472,56 @@ class TaskType(KeywordMixinModel):
     title=models.CharField(max_length = MAX_TITLE_LEN)
     description=models.TextField()
     qualifications = models.ManyToManyField(QualificationRequirement, blank=True)
+
+    def has_quals(self):
+        return(self.qualifications.all().exists())
+
+    def active_task_count(self):
+        activeTasks = self.task_set.filter(
+            status = TaskStatusField.ASSIGNABLE,
+            expires__gt = timezone.now()
+        )
+        return(activeTasks.count())
+
+    def first_active_task(self):
+        activeTasks = self.task_set.filter(
+            status = TaskStatusField.ASSIGNABLE,
+            expires__gt = timezone.now()
+        )
+        return(activeTasks[0])
+
+    def serialize_qualifications(self):
+        """
+        Serialize this task's qualification requirements
+        for sending the JSON API.
+        """
+        ret = []
+        for qualreq in self.qualifications.all():
+            q = {
+                "QualificationTypeId" : qualreq.qualification.aws_id,
+                "Comparator" : qualreq.get_comparator_display(),
+                "RequiredToPreview": qualreq.required_to_preview,
+            }
+            if ( len(qualreq.int_values) > 0):
+                q["IntegerValues"] = qualreq.int_values
+            elif ( qualreq.locale_values.all().exists() ):
+                locList = []
+                for locale in qualreq.locale_values.all():
+                    locList.append(locale.serialize())
+                q["LocaleValues"] = locList
+            else:
+                raise Exception("Invalid Qual Requirement Data!")
+
+            ret.append(q)
+
+        return(ret)
+
+
+    def human_duration(self):
+        dur = self.assignment_duration
+        # @todo - make this generate words that are easier to
+        # understand for human.
+        return(str(dur))
 
     def __str__(self):
         return("<%s...>" % self.aws_id[0:6])
@@ -385,20 +564,105 @@ class Task(models.Model):
     # For Delete Operation
     dispose = models.BooleanField(default=False)
 
+    def is_questionform(self):
+        q = QuestionValidator()
+        quesType = q.determine_type( self.question )
+        return( quesType == "QuestionForm" )
+
+    def is_expired(self):
+        return( timezone.now() > self.expires )
+
+    def is_assignable(self):
+        return(self.state == TaskStatusField.ASSIGNABLE )
+
     def is_reviewable(self):
         return( self.state == TaskStatusField.REVIEWABLE )
 
     def is_reviewing(self):
         return( self.state == TaskStatusField.REVIEWING )
 
-    def serialize_qualifications(self):
-        ret = []
+    def check_state_change(self):
+        """
+        """
+        # Check to see if all of the task assignments have been
+        # handed out - if so then we can change from assignable
+        # to reviewable.
+        if ( self.is_assignable() ):
+            count = self.completed_assignment_count()
+            if ( count >= self.max_assigments ):
+                self.state = TaskStatusField.REVIEWABLE
+                self.save()
+
+    def has_quals(self):
+        return( self.tasktype.has_quals() )
+
+    def worker_has_accepted(self, worker):
+        hasAccepted = self.assignment_set.filter(
+            dispose = False,
+            worker = worker,
+            status = AssignmentStatusField.ACCEPTED
+        ).exists()
+        return(hasAccepted)
+
+    def has_assignment(self, worker):
+        """
+        Determine if a worker has submitted an assignment for this
+        task.
+        """
+        return( self.assignment_set.filter(
+            dispose = False,
+            worker = worker
+            ).exists() )
+
+    def submitted_assignments(self):
+        """
+        Get a list of all assignments that have been submitted by
+        workers but have not been approved/rejected yet.
+        """
+
+        ret = self.assignment_set.filter(
+            dispose=False,
+            status = AssignmentStatusField.SUBMITTED
+        )
+
+        return(ret)
+
+    def completed_assignments(self):
+        """
+        Get a list of all the assignments that are completed, meaning
+        that they were submitted by a worker and the requester
+        has approved or rejected them.
+        """
+        q = (
+            Q(dispose=False) &
+            ( Q(status = AssignmentStatusField.APPROVED) |
+              Q(status = AssignmentStatusField.REJECTED)
+              )
+            )
+        ret = self.assignment_set.filter(q)
+        return(ret)
+
+    def prop_table(self):
+        """
+        Return key value pair objects for the 'property_table' template
+        component.
+        """
+        ret = [
+            {"label" : "AWS Id", "value": self.aws_id},
+            {"label" : "Requester", "value": self.requester.user.get_full_name()},
+            {"label" : "Created", "value": self.created},
+            {"label" : "Expires", "value": self.expires},
+            {"label" : "Description", "value": self.tasktype.description},
+            {"label" : "Duration", "value": self.tasktype.human_duration()},
+            {"label" : "Reward", "value" : "$%s" % self.tasktype.reward},
+        ]
         return(ret)
 
     @property
     def completed_assignment_count(self):
 
         q = (
+            Q(dispose=False) &
             Q(status = AssignmentStatusField.APPROVED) |
             Q(status = AssignmentStatusField.REJECTED)
         )
@@ -406,7 +670,10 @@ class Task(models.Model):
 
     @property
     def pending_assignment_count(self):
-        q = Q(status = AssignmentStatusField.SUBMITTED)
+        q = (
+            Q(dispose=False) &
+            Q(status = AssignmentStatusField.SUBMITTED)
+        )
         return( self.assignment_set.filter(q).count())
 
     def compute_assignment_stats(self):
@@ -417,6 +684,11 @@ class Task(models.Model):
             available = 0
 
         return(available, pending, completed)
+
+    @property
+    def available_assignment_count(self):
+        available,_,_ = self.compute_assignment_stats()
+        return(available)
 
     def serialize_assignment_stats(self):
 
@@ -443,10 +715,10 @@ class Task(models.Model):
             "AutoApprovalDelayInSeconds" : int(self.tasktype.auto_approve.total_seconds()),
             "AssignmentDurationInSeconds" : int(self.tasktype.assignment_duration.total_seconds()),
             "Expiration" : self.expires,
-            "Keywords" : self.serialize_keywords(),
+            "Keywords" : self.tasktype.serialize_keywords(),
             "HITStatus" : self.get_status_display(),
             "MaxAssignments" : self.max_assignments,
-            "QualificationRequirements" : self.serialize_qualifications(),
+            "QualificationRequirements" : self.tasktype.serialize_qualifications(),
             "HITReviewStatus" : self.get_reviewstatus_display(),
         }
         if ( len(self.question) > 0 ):
@@ -482,10 +754,18 @@ class Assignment(models.Model):
     rejected=models.DateTimeField(null=True)
     deadline=models.DateTimeField(null=True)
 
+    # QuestionFormAnswers object that encodes all
+    #   of the data that a worker has submitted for a
+    #   particular assignment.
+    answer = models.TextField()
+
     # Need to  figure out how to store the answers to a
     # assignment
     MAX_FEEDBACK_LEN = 512
     feedback = models.CharField(max_length = MAX_FEEDBACK_LEN)
+
+    # Flag indicating whether this object is "deleted" or not
+    dispose = models.BooleanField(default=False)
 
     def is_accepted(self):
         return( self.status == AssignmentStatusField.ACCEPTED )
@@ -493,14 +773,57 @@ class Assignment(models.Model):
     def is_submitted(self):
         return( self.status == AssignmentStatusField.SUBMITTED )
 
+    def approve(self, reason=""):
+        self.approved = timezone.now()
+        self.status = AssignmentStatusField.APPROVED
+        self.feedback = reason
+
     def is_approved(self):
         return( self.status == AssignmentStatusField.APPROVED )
+
+    def reject(self, reason=""):
+        self.rejected = timezone.now()
+        self.status = AssignmentStatusField.REJECTED
+        self.feedback = reason
 
     def is_rejected(self):
         return( self.status == AssignmentStatusField.REJECTED )
 
     def is_decided(self):
         return( self.is_approved() or self.is_rejected() )
+
+    def get_answer_display(self):
+        """
+        Parse the QuestionFormAnswer object if it exists and
+        put together an object that can be used in the
+        qformanswer_table template.
+        @return list of dict objects, each being a set of
+            key-value pairs for the question Id and submitted answer
+        """
+        ans = QFormAnswer(self.answer)
+        return(ans.answers)
+
+    def prop_table(self):
+        """
+        Generate a list of key value pairs for displaying in a
+        property_table template component.
+        """
+        ret = [
+            {"label" : "AWS Id", "value": self.aws_id},
+            {"label" : "Worker", "value": self.worker.aws_id},
+            {"label" : "Status", "value": self.get_status_display()},
+            {"label" : "Accepted", "value" : self.accepted},
+            {"label" : "Deadline", "value" : self.deadline},
+        ]
+        if ( self.submitted is not None ):
+            ret.append({"label" : "Submitted", "value" : self.submitted})
+        if ( self.approved is not None ):
+            ret.append({"label" : "Approved", "value" : self.approved})
+        if ( self.rejected is not None ):
+            ret.append({"label" : "Rejected", "value" : self.rejected})
+        if ( self.is_submitted() ):
+            ret.append({"label" : "Auto Approve", "value" : self.auto_approve})
+        return(ret)
 
     def serialize(self):
         ret = {
@@ -514,20 +837,19 @@ class Assignment(models.Model):
         if ( not self.is_accepted() ):
             ret["AssignmentStatus"] = self.get_status_display()
 
-        if ( self.is_submitted() ):
-            ret["AutoApprovalTime"] = self.auto_approve
+        if ( self.submitted is not None ):
             ret["SubmitTime"] = self.submitted
-            # @todo - figure this out.
-            #ret["Answer"] = self.answer.serialize()
+            ret["Answer"] = self.answer
 
-        if ( self.is_approved() ):
-            ret["ApprovalTime"] = self.approved
+            if ( self.is_decided() ):
+                ret["RequesterFeedback"] = self.feedback
+                if ( self.is_approved() ):
+                    ret["ApprovalTime"] = self.approved
 
-        if ( self.is_rejected() ):
-            ret["RejectionTime"] = self.rejected
-
-        if ( self.is_decided() ):
-            ret["RequesterFeedback"] = self.feedback
+                if ( self.is_rejected() ):
+                    ret["RejectionTime"] = self.rejected
+            else:
+                ret["AutoApprovalTime"] = self.auto_approve
 
         return(ret)
 

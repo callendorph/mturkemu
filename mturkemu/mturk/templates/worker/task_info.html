@@ -1,0 +1,13 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3> Task: {{task.tasktype.title}} </h3>
+  </div>
+  <div class="panel-body">
+    {#  I want to show info about this particular task to include qualifications and other such information  #}
+    <h3> Properties </h3>
+    {% include "comps/property_table.html" with props=task.prop_table %}
+
+    <h3> Qualifications </h3>
+    {% include "comps/qualreq_table.html" with qualreqs=task.tasktype.qualifications.all %}
+  </div>
+</div>

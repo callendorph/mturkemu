@@ -1,0 +1,15 @@
+{% extends "requester/root.html" %}
+
+{% block sidebar %}
+{% include "requester/sidebar.html" %}
+{% endblock %}
+
+{% block tab %}
+<div class="row">
+  <div class="col-sm-12 col-md-12">
+    <h2> Requester Tasks</h2>
+    {% include "requester/requester_id.html" with requester=requester %}
+    {% include "requester/task_table.html" with tasks=tasks %}
+  </div>
+</div>
+{% endblock %}

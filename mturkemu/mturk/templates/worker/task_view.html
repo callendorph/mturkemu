@@ -1,0 +1,20 @@
+{% extends "worker/root.html" %}
+
+{% block sidebar %}
+{% include "worker/sidebar.html" %}
+{% endblock %}
+
+{% block tab %}
+<div class="row">
+  <div class="col-sm-12 col-md-12">
+    <h1> Task </h1>
+    {% include "worker/worker_id.html" with worker=worker %}
+    {% include "comps/server_msgs.html" with messages=messages %}
+
+    {% include "worker/task_info.html" with task=task %}
+
+    {% include "worker/task_work.html" with task=task assignment=assignment  form=form ext=ext%}
+
+  </div>
+</div>
+{% endblock %}

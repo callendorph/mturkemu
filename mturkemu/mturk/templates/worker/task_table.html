@@ -1,0 +1,46 @@
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3> Tasks </h3>
+  </div>
+  <div class="panel-body">
+    <table class="table">
+      <thead>
+        <tr>
+          <th> Requester </th>
+          <th> Time Alotted </th>
+          <th> Reward </th>
+          <th> Has Quals? </th>
+          <th> Available HITs </th>
+          <th> Actions </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for taskType in taskTypes.list %}
+        {% with task=taskType.first_active_task %}
+        <tr>
+          <td> {{taskType.requester.user.get_full_name}} </td>
+          <td> {{taskType.human_duration}} </td>
+          <td> ${{taskType.reward}} </td>
+          <td> {{taskType.has_quals|yesno}} </td>
+          <td> {{taskType.active_task_count}}</td>
+          <td>
+            <a class="btn btn-default"
+               href="/worker/tasks/{{task.id}}/">
+              <span class="glyphicon glyphicon-search"/>
+            </a>
+          </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr>
+          <td colspan="6"> No Tasks Present </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+  <div class="panel-footer">
+    {% include "comps/pager.html" with url="/worker/tasks/" page=taskTypes %}
+  </div>
+</div>

@@ -283,6 +283,149 @@ class RequesterTasksPage(LoginRequiredMixin, MTurkBaseView):
         }
         return( render(request, "requester/tasks.html", cxt) )
 
+class RequesterTaskInfoPage(LoginRequiredMixin, MTurkBaseView):
+    """
+    Page to view information about a particular task.
+    """
+
+    def get(self, request, task_id):
+        requester = self.get_requester(request)
+
+        task_id = int(task_id)
+        task = get_object_or_404(Task, pk = task_id, requester=requester)
+
+        cxt = {
+            "active": "tasks",
+            "requester": requester,
+            "task" : task,
+        }
+
+        return( render(request, "requester/task_info.html", cxt) )
+
+class RequesterTaskRemove(LoginRequiredMixin, MTurkBaseView):
+    """
+    """
+    def get(self, request, task_id):
+        requester = self.get_requester(request)
+
+        task_id = int(task_id)
+        task = get_object_or_404(Task, pk = task_id, requester=requester)
+
+        if ( not (task.is_reviewable() or task.is_reviewing() ) ):
+            messages.error(
+                request,
+                "Task Is Not in a Valid state for Disposal: Must be reviewable/reviewing to be removed"
+                )
+        else:
+            # Dispose of the Task
+            task.state = TaskStatusField.DISPOSED
+            task.dispose = True
+            task.save()
+
+        return( redirect("requester-task-info", task_id=task_id) )
+
+class RequesterTaskApproveAll(LoginRequiredMixin, MTurkBaseView):
+    """
+    Approve all assignments that have been submitted to a particular
+    task.
+    """
+    def get(self, request, task_id):
+
+        requester = self.get_requester(request)
+
+        task_id = int(task_id)
+        task = get_object_or_404(Task, pk = task_id, requester=requester)
+
+        assignments = task.submitted_assignments
+        if ( len(assignments) > 0 ):
+            for assignment in assignments:
+                assignment.approve("Bulk Assignment Approval")
+                assignment.save()
+            messages.info(
+                request,
+                "All Submitted Assignments Approved"
+                )
+        else:
+            messages.warning(
+                request,
+                "No Assignments to Approve!"
+                )
+
+        return(redirect("requester-task-info", task_id=task_id) )
+
+class RequesterTaskRejectAll(LoginRequiredMixin, MTurkBaseView):
+    """
+    Reject all assignments that have been submitted to a particular
+    task.
+    """
+    def get(self, request, task_id):
+        requester = self.get_requester(request)
+
+        task_id = int(task_id)
+        task = get_object_or_404(Task, pk = task_id, requester=requester)
+
+        assignments = task.submitted_assignments
+        if ( len(assignments) > 0 ):
+            for assignment in assignments:
+                assignment.reject("Bulk Assignment Rejection")
+                assignment.save()
+            messages.info(
+                request,
+                "All Submitted Assignments Rejected"
+                )
+        else:
+            messages.warning(
+                request,
+                "No Assignments to Reject!"
+                )
+
+        return(redirect("requester-task-info", task_id=task_id) )
+
+class RequesterTaskApproveAssignment(LoginRequiredMixin, MTurkBaseView):
+    """
+    Approve a particular assignment associated with a particular task.
+    """
+    def get(self, request, task_id, assign_id):
+
+        requester = self.get_requester(request)
+
+        task_id = int(task_id)
+        task = get_object_or_404(Task, pk = task_id, requester=requester)
+
+        assign_id = int(assign_id)
+        assignment = get_object_or_404(Assignment, pk=assign_id, task=task)
+
+        if ( not assignment.is_submitted() ):
+            raise SuspiciousOperation("Attempt to Approve Assignment in Wrong State")
+
+        assignment.approve("Approved via Web Interface")
+        assignment.save()
+
+        return(redirect("requester-task-info", task_id=task_id) )
+
+class RequesterTaskRejectAssignment(LoginRequiredMixin, MTurkBaseView):
+    """
+    Reject a particular assignment associated with a particular task.
+    """
+    def get(self, request, task_id, assign_id):
+
+        requester = self.get_requester(request)
+
+        task_id = int(task_id)
+        task = get_object_or_404(Task, pk = task_id, requester=requester)
+
+        assign_id = int(assign_id)
+        assignment = get_object_or_404(Assignment, pk=assign_id, task=task)
+
+        if ( not assignment.is_submitted() ):
+            raise SuspiciousOperation("Attempt to Reject Assignment in Wrong State")
+
+        assignment.reject("Rejected via Web Interface")
+        assignment.save()
+
+        return(redirect("requester-task-info", task_id=task_id) )
+
+
 class RequesterWorkersPage(LoginRequiredMixin, MTurkBaseView):
     """
     """

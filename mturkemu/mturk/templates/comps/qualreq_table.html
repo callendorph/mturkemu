@@ -1,0 +1,21 @@
+{# Input is a list of qualification requirement objects in an object 'qualreqs' #}
+<table class="table">
+  <thead>
+    <tr>
+      <th>Name </th>
+      <th>Requirement</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for qualreq in qualreqs %}
+    <tr>
+      <td> {{qualreq.qualification.name}} </td>
+      <td> {{qualreq.get_comparator_display}} {{qualreq.get_values_display}} </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="2"> No Qualifications Required for this Task </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
