@@ -242,11 +242,6 @@ class RequesterQualRemove(LoginRequiredMixin, MTurkBaseView):
     """
 
     def get(self, request, qual_id):
-        # @todo - we may want to add a means of
-        #   using the ListViewForm in the GET request so that
-        #   when we redirect, the user sees the appropriate page
-        #   in the qualifications list.
-
         requester = self.get_requester(request)
         qual_id = int(qual_id)
         qual = get_object_or_404(Qualification, pk = qual_id)
@@ -257,10 +252,15 @@ class RequesterQualRemove(LoginRequiredMixin, MTurkBaseView):
         qual.dispose = True
         qual.save()
 
+        # @todo - we may want to add a means of
+        #   using the ListViewForm in the GET request so that
+        #   when we redirect, the user sees the appropriate page
+        #   in the qualifications list.
         return( redirect("requester-quals"))
 
 class RequesterTasksPage(LoginRequiredMixin, MTurkBaseView):
     """
+    List the tasks associated with this requester.
     """
 
     def get(self, request):
