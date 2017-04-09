@@ -11,6 +11,7 @@
 from django.conf import settings
 
 from mturk.errors import *
+from mturk.quesform import *
 
 from lxml import etree
 
@@ -97,7 +98,6 @@ class QuestionValidator(object):
         tag = etree.QName(root.tag)
         return(tag.localname)
 
-
     def determine_type(self, content):
         name = self.get_root_element_name(content)
         if ( name not in SCHEMAS.keys() ):
@@ -133,3 +133,18 @@ class QuestionValidator(object):
                             if ( ques_id in ForbiddenKeys ):
                                 raise Exception("Invalid Question Identifier: Forbidden Value")
         return( name )
+
+
+    def extract(self, content):
+        name = self.determine_type(content)
+        root = self.parse(name, content)
+
+        if ( name == "ExternalQuestion" ):
+            ret = ExternalQuestion(root)
+        elif ( name == "HTMLQuestion" ):
+            ret = HTMLQuestion(root)
+        else:
+            # We don't make the form
+            ret = root
+
+        return(name, ret)

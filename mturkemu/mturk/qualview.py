@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from mturk.models import *
 from mturk.utils import MTurkBaseView
+from mturk.questions import QuestionValidator
 from mturk.quesform import QuestionForm
 from mturk.answerkey import AnswerKey
 from mturk.fields import *
@@ -58,7 +59,13 @@ class WorkerCompleteQualTest(LoginRequiredMixin, MTurkBaseView):
 
         url = reverse("worker-qual-test", kwargs={"req_id" : req_id})
 
-        form = QuestionForm( url, req.qualification.test )
+        q = QuestionValidator()
+        name = q.determine_type(req.qualification.test)
+        if ( name != "QuestionForm" ):
+            raise SuspiciousOperation("Invalid Qualification Question Object")
+        quesRoot = self.parse(name, req.qualification.test)
+
+        form = QuestionForm( url, quesRoot )
 
         cxt = {
             "active" : "quals",
@@ -97,7 +104,14 @@ class WorkerCompleteQualTest(LoginRequiredMixin, MTurkBaseView):
             return( redirect( "worker-quals" ) )
 
         url = reverse("worker-qual-test", kwargs={"req_id" : req_id})
-        form = QuestionForm( url, req.qualification.test )
+
+        q = QuestionValidator()
+        name = q.determine_type(req.qualification.test)
+        if ( name != "QuestionForm" ):
+            raise SuspiciousOperation("Invalid Qualification Question Object")
+        quesRoot = self.parse(name, req.qualification.test)
+
+        form = QuestionForm( url, quesRoot )
 
         form.process(request.POST)
         if ( not form.is_valid() ):

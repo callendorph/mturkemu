@@ -10,7 +10,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
-from mturk.questions import QuestionValidator
 from mturk.errors import *
 
 from lxml import etree
@@ -398,13 +397,8 @@ class QuestionForm(object):
     """
     XML QuestionForm object
     """
-    def __init__(self, url, content):
+    def __init__(self, url, root):
         self.url = url
-        self.rawContent = content
-
-        q = QuestionValidator()
-        testType = etree.QName(q.get_root_element_name(content))
-        root = q.parse(testType.localname, content)
 
         self.contents = []
         self.parse(root)
