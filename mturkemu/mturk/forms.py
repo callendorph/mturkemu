@@ -46,3 +46,14 @@ class QualCreateForm(forms.Form):
 
     name = forms.CharField(max_length = Qualification.MAX_NAME_LEN, label="Name")
     description = forms.CharField(label="Description", widget=forms.Textarea(attrs={'rows': 4}))
+
+
+class ExternalQuestionForm(forms.Form):
+    """
+    This form is used as GET encoded arguments to the
+    ExternalQuestion or the HTMLQuestion objects.
+    """
+    assignmentId = forms.CharField(max_length = 256 )
+    workerId = forms.CharField(max_length = 256)
+    hitId = forms.CharField(max_length = 256)
+    turkSubmitTo = forms.URLField(max_length=512)
