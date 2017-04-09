@@ -96,34 +96,40 @@ class CreateTaskType(object):
                     "Qualification[%s] is not active" % qualId, 12
                 )
 
-            queryParams = {
-                "qualification__aws_id": qualId,
-                "comparator": compId,
+            baseReqParams = {
+                "comparator" : compId,
+                "required_to_preview": qual.get("RequiredToPreview", False),
             }
 
-            try:
-                requirePreview = qual["RequiredToPreview"]
-                queryParams["required_to_preview"] = requirePreview
-            except KeyError:
-                queryParams["required_to_preview"] = False
-
-            try:
-                intList = qual["IntegerValues"]
-                if ( len(intList) > 0 ):
-                    intStr = ",".join(intList)
-                    queryParams["int_values"] = intStr
-            except KeyError:
-                pass
+            intList = qual.get("IntegerValues", "")
+            if ( len(intList) > 0 ):
+                intStr = ",".join(intList)
+                baseReqParams["int_values"] = intStr
 
             try:
                 localeList = qual["LocaleValues"]
                 raise NotImplementedError("Locale Query Not Implemented Yet")
+                baseReqParams["locale_values"] = []
             except KeyError:
                 pass
 
-            # If the object with these parameters does not
-            # exist - then this is an error
-            obj = QualificationRequirement.objects.get( **queryParams )
+            # We now create a qualification requirement object if
+            # one does not exist that matches these specifications
+            queryParams = {
+                "qualification__aws_id": qualId,
+            }
+            queryParams.update(baseReqParams)
+
+            try:
+                obj = QualificationRequirement.objects.get( **queryParams )
+            except QualificationRequirement.DoesNotExist:
+                createParams = {
+                    "qualification" : qual,
+                }
+                createParams.update(baseReqParams)
+
+                obj = QualificationRequirement.objects.create(**createParams)
+
             ret.append(obj)
 
         return(ret)
