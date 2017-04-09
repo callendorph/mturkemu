@@ -13,7 +13,7 @@ from django.http import Http404
 from django.utils import timezone
 
 from mturk.models import *
-from mturk.taskviews import CreateTaskType
+from mturk.taskviews import CreateTaskType, CreateTask
 from mturk.errors import *
 from mturk.questions import QuestionValidator
 from mturk.fields import *

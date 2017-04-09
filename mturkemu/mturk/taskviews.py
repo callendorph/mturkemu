@@ -182,11 +182,9 @@ class CreateTaskType(object):
         """
         tt = TaskType.objects.create(**self.params)
 
-        # @note - This is incorrect - I think we will likely
-        #   need to create the qual objects here.
-        raise NotImplementedError()
         # Add the qualification req objects
         for qual in self.quals:
+
             tt.qualifications.add(qual)
 
         # Create new Tags and add to our existing list.
@@ -246,7 +244,7 @@ class CreateTask(object):
             if ( name not in validQuestionTypes ):
                 raise RequestError("Invalid 'Question' Object: %s" % name)
 
-            ques.validate(quesData)
+            ques.validate(name, quesData)
             createParams["question"] = quesData
         except KeyError:
             try:
