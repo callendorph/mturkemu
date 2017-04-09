@@ -12,7 +12,7 @@ from mturk.errors import *
 
 from datetime import timedelta
 
-def parse_keyword_tags(self, keywordStr):
+def parse_keyword_tags(keywordStr):
     """
     Parse a comma-separated string of keywords into two lists,
     the first is a list of existing @c KeywordTag objects and
@@ -40,7 +40,7 @@ def parse_keyword_tags(self, keywordStr):
     else:
         return([], [])
 
-def create_keyword_tags(self, tags):
+def create_keyword_tags( tags):
     """
     Create a set of new keywords
     @param tags list of strings
