@@ -59,9 +59,9 @@ class CreateTaskType(object):
 
         # Common Parameters
         self.params = {
-            "requester": requester,
-            "assignment_duration": timedelta.seconds(
-                int(request["AssignmentDurationInSeconds"])
+            "requester": self.requester,
+            "assignment_duration": timedelta(
+                seconds=int(request["AssignmentDurationInSeconds"])
             ),
             "reward": float(request["Reward"]),
             "title" : request["Title"],
