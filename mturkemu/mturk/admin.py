@@ -15,7 +15,8 @@ models = [
     Task,
     Assignment,
     BonusPayment,
-    WorkerBlock
+    WorkerBlock,
+    KeywordTag
     ]
 
 for model in models:
