@@ -19,12 +19,10 @@ def parse_keyword_tags(keywordStr):
     the second is a list of strings indicating new tags
     @return tuple consisting of (existingList, newList)
     """
-    comps = keywordStr.split(",")
-    comps = map( lambda x: x.strip(), comps)
-    comps = filter( lambda x: len(x), comps )
+    comps = [x.strip() for x in keywordStr.split(",")]
+    kwds = [x.lower() for x in comps if len(x) > 0 ]
 
     if ( len(comps) > 0 ):
-        kwds = map(lambda x: x.lower(), comps )
 
         # Attempt to find existing tags with these keywords,
         # and arrange two lists of existing and new keywords
