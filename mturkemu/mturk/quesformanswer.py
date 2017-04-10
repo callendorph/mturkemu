@@ -27,11 +27,19 @@ class QFormAnswer(object):
         ret = {}
         for child in root:
             tag = etree.QName(child.tag)
-            if ( tag.localname == "UploadedFileSizeInBytes" ):
+            if ( tag.localname == "SelectionIdentifier" ):
+                selList = ret.get(tag.localname, [])
+                selList.append(child.text)
+                ret[tag.localname] = selList
+            elif ( tag.localname == "UploadedFileSizeInBytes" ):
                 ret[tag.localname] = int(child.text)
             else:
                 ret[tag.localname] = child.text
 
+        if ( "SelectionIdentifier" in ret.keys() ):
+            selList = ret["SelectionIdentifier"]
+            selStr = " ".join(selList)
+            ret["SelectionIdentifier"] = selStr
         return(ret)
 
     def parse(self, root):
