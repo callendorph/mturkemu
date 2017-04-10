@@ -532,9 +532,6 @@ class WorkerTaskAccept(LoginRequiredMixin, MTurkBaseView):
                     deadline = deadlineTime
                 )
 
-                task.check_state_change()
-
-        # Redirect to the task view.
         return( redirect("worker-task-info", task_id = task_id))
 
 class WorkerTaskReturn(LoginRequiredMixin, MTurkBaseView):
@@ -632,8 +629,6 @@ class WorkerExternalSubmit(View):
 
         assignment.save()
 
-        assignment.task.check_state_change()
-
         return( render(request, "worker/extques_response.html", {} ) )
 
 class WorkerTaskSubmit(LoginRequiredMixin, MTurkBaseView):
@@ -694,8 +689,6 @@ class WorkerTaskSubmit(LoginRequiredMixin, MTurkBaseView):
         assignment.status = AssignmentStatusField.SUBMITTED
         assignment.submitted = timezone.now()
         assignment.save()
-
-        task.check_state_changed()
 
         # Get the next task in this task group that the
         # worker can work on

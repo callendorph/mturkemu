@@ -587,14 +587,30 @@ class Task(models.Model):
 
     def check_state_change(self):
         """
+        This method checks the number of assignments for a task
+        given its state and manages the state transitions
+        @note - this method is invoked primarily in a post_save
+          signal event on assignment save.
         """
-        # Check to see if all of the task assignments have been
-        # handed out - if so then we can change from assignable
-        # to reviewable.
+        # @todo - we aren't handling task expiration especially
+        #    well here yet.
+        available, pending, completed = self.compute_assignment_stats()
         if ( self.is_assignable() ):
-            count = self.completed_assignment_count()
-            if ( count >= self.max_assigments ):
-                self.state = TaskStatusField.REVIEWABLE
+            if ( completed >= self.max_assignments ):
+                self.status = TaskStatusField.REVIEWABLE
+                self.save()
+            elif ( available == 0 ):
+                self.status = TaskStatusField.UNASSIGNABLE
+                self.save()
+
+        elif ( self.is_unassignable() ):
+            if ( completed >= self.max_assignments ):
+                self.status = TaskStatusField.REVIEWABLE
+                self.save()
+            elif ( available > 0 ):
+                # Worker could have returned a task making it
+                # assignable again.
+                self.status = TaskStatusField.ASSIGNABLE
                 self.save()
 
     def has_quals(self):
@@ -857,6 +873,16 @@ class Assignment(models.Model):
 
     def __str__(self):
         return("<%s...,STAT=%s" % (self.aws_id[0:6], self.status))
+
+@receiver(post_save, sender=Assignment, dispatch_uid="mturk_assignmt_save")
+def task_state_update(sender, instance, **kwargs):
+    """
+    Check for state update of the task associated with an Assignment
+    whenever an assignmnent is updated.
+    """
+    assignment = instance
+    task = assignment.task
+    task.check_state_change()
 
 class BonusPayment(models.Model):
     """
