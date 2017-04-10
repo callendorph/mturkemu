@@ -22,17 +22,20 @@
     {% for assignment in assignments %}
     <div class="panel panel-default" style="margin: 20px">
       <div class="panel-body">
-      <h3> Assignment Parameters </h3>
-      {% include "comps/property_table.html" with props=assignment.prop_table %}
-      <h3> Answers </h3>
-      {% include "comps/qformanswer_table.html" with answers=assignment.get_answer_display %}
-      <h3> Approve / Reject </h3>
-      <a class="btn btn-success" href="/requester/tasks/{{task.id}}/assign/{{assignment.id}}/approve/">
-        Approve
-      </a>
-      <a class="btn btn-danger" href="/requester/tasks/{{task.id}}/assign/{{assignment.id}}/reject/">
-        Reject
-      </a>
+        <h3> Assignment Parameters </h3>
+        {% include "comps/property_table.html" with props=assignment.prop_table %}
+        <h3> Answers </h3>
+        {% include "comps/qformanswer_table.html" with answers=assignment.get_answer_display %}
+
+      </div>
+      <div class="panel-footer">
+        <a class="btn btn-success" href="/requester/tasks/{{task.id}}/assign/{{assignment.id}}/approve/">
+          Approve
+        </a>
+        <a class="btn btn-danger" href="/requester/tasks/{{task.id}}/assign/{{assignment.id}}/reject/">
+          Reject
+        </a>
+
       </div>
     </div>
     {% empty %}
