@@ -317,13 +317,18 @@ class RequesterTaskRemove(LoginRequiredMixin, MTurkBaseView):
                 request,
                 "Task Is Not in a Valid state for Disposal: Must be reviewable/reviewing to be removed"
                 )
+            return( redirect("requester-task-info", task_id=task_id) )
         else:
             # Dispose of the Task
-            task.state = TaskStatusField.DISPOSED
+            task.status = TaskStatusField.DISPOSED
             task.dispose = True
             task.save()
+            messages.info(
+                request,
+                "Task Successfully Removed"
+                )
 
-        return( redirect("requester-task-info", task_id=task_id) )
+            return( redirect("requester-tasks") )
 
 class RequesterTaskApproveAll(LoginRequiredMixin, MTurkBaseView):
     """
