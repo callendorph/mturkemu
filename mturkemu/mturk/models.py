@@ -569,17 +569,21 @@ class Task(models.Model):
         quesType = q.determine_type( self.question )
         return( quesType == "QuestionForm" )
 
+    # Status Accessors
     def is_expired(self):
         return( timezone.now() > self.expires )
 
     def is_assignable(self):
-        return(self.state == TaskStatusField.ASSIGNABLE )
+        return(self.status == TaskStatusField.ASSIGNABLE )
+
+    def is_unassignable(self):
+        return(self.status == TaskStatusField.UNASSIGNABLE)
 
     def is_reviewable(self):
-        return( self.state == TaskStatusField.REVIEWABLE )
+        return( self.status == TaskStatusField.REVIEWABLE )
 
     def is_reviewing(self):
-        return( self.state == TaskStatusField.REVIEWING )
+        return( self.status == TaskStatusField.REVIEWING )
 
     def check_state_change(self):
         """
@@ -650,29 +654,27 @@ class Task(models.Model):
         ret = [
             {"label" : "AWS Id", "value": self.aws_id},
             {"label" : "Requester", "value": self.requester.user.get_full_name()},
+            {"label" : "Status", "value": self.get_status_display()},
             {"label" : "Created", "value": self.created},
             {"label" : "Expires", "value": self.expires},
             {"label" : "Description", "value": self.tasktype.description},
             {"label" : "Duration", "value": self.tasktype.human_duration()},
             {"label" : "Reward", "value" : "$%s" % self.tasktype.reward},
+            {"label" : "Max Assignments", "value" : self.max_assignments},
         ]
         return(ret)
 
     @property
     def completed_assignment_count(self):
-
-        q = (
-            Q(dispose=False) &
-            Q(status = AssignmentStatusField.APPROVED) |
-            Q(status = AssignmentStatusField.REJECTED)
-        )
-        return(self.assignment_set.filter(q).count())
+        return(self.completed_assignments().count())
 
     @property
     def pending_assignment_count(self):
         q = (
-            Q(dispose=False) &
-            Q(status = AssignmentStatusField.SUBMITTED)
+            Q(dispose=False) & (
+                Q(status = AssignmentStatusField.SUBMITTED) |
+                Q(status = AssignmentStatusField.ACCEPTED)
+            )
         )
         return( self.assignment_set.filter(q).count())
 
