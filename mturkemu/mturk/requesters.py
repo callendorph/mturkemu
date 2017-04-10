@@ -336,11 +336,12 @@ class RequesterTaskApproveAll(LoginRequiredMixin, MTurkBaseView):
         task_id = int(task_id)
         task = get_object_or_404(Task, pk = task_id, requester=requester)
 
-        assignments = task.submitted_assignments
-        if ( len(assignments) > 0 ):
+        assignments = task.submitted_assignments()
+        if ( assignments.count() > 0 ):
             for assignment in assignments:
                 assignment.approve("Bulk Assignment Approval")
                 assignment.save()
+
             messages.info(
                 request,
                 "All Submitted Assignments Approved"
@@ -364,11 +365,12 @@ class RequesterTaskRejectAll(LoginRequiredMixin, MTurkBaseView):
         task_id = int(task_id)
         task = get_object_or_404(Task, pk = task_id, requester=requester)
 
-        assignments = task.submitted_assignments
-        if ( len(assignments) > 0 ):
+        assignments = task.submitted_assignments()
+        if ( assignments.count() > 0 ):
             for assignment in assignments:
                 assignment.reject("Bulk Assignment Rejection")
                 assignment.save()
+
             messages.info(
                 request,
                 "All Submitted Assignments Rejected"
