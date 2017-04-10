@@ -704,7 +704,7 @@ class Task(models.Model):
         return(ret)
 
 
-    def serialize(self, includeAnnotiation=False):
+    def serialize(self, includeAnnotation=False):
         ret = {
             "HITId" : self.aws_id,
             "HITTypeId" : self.tasktype.aws_id,
