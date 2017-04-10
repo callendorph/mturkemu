@@ -9,6 +9,8 @@
   <div class="col-sm-12 col-md-12">
     <h2> Requester Tasks</h2>
     {% include "requester/requester_id.html" with requester=requester %}
+    {% include "comps/server_msgs.html" %}
+
     {% include "requester/task_table.html" with tasks=tasks %}
   </div>
 </div>
