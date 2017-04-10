@@ -19,8 +19,50 @@ from mturk.questions import QuestionValidator
 from mturk.fields import *
 
 from datetime import timedelta
+import re
 
 class MTurkHandlers(object):
+
+    # The "MaxResults" key in the list operations is not required - so
+    #    we need a default to use.
+    #  @todo - Check the amazon service to determine what the default
+    #    behavior is. Max is 100 - so I don't think it can be
+    #    just return ALL the objects in the list. This would also
+    #    be a DoS capable vulnerability.
+    DEF_NUM_RESULTS = 10
+
+    def gen_next_token(self, offset):
+        """
+        The next token in the AWS service is a string token but
+        this attempts to simplify this by just setting a offset
+        index encoded in the token string that we can parse to
+        determine the next position to respond with in a list API
+        method.
+        """
+        return( "A%010d" % offset )
+
+    def get_offset_from_token(self, token):
+        """
+        Utility to extract the offset in a query from the next
+        token submitted in a list request.
+        """
+        tokenRegex = re.compile("A(\d+)")
+        m = tokenRegex.match(token)
+        if m:
+            offsetStr = m.group(1)
+            offset = int(offsetStr)
+            return(offset)
+        else:
+            raise Exception("Invalid Next Token Format: %s" % token)
+
+    def get_list_args(self, kwargs):
+        results = kwargs.get("MaxResults", MTurkHandlers.DEF_NUM_RESULTS)
+        try:
+            token = kwargs["NextToken"]
+            offset = self.get_offset_from_token(token)
+        except KeyError:
+            offset = 0
+        return(results, offset)
 
     #######################
     # API Methods
@@ -69,7 +111,50 @@ class MTurkHandlers(object):
         pass
 
     def ListAssignmentsForHIT(self, **kwargs):
-        pass
+        requester = kwargs["EmuRequester"]
+        taskId = kwargs["HITId"]
+
+        task = get_object_or_404(Task, aws_id = taskId)
+        if ( task.requester != requester ):
+            raise PermissionDenied()
+
+        assignStats = kwargs["AssignmentStatuses"]
+        buildQuery = Q(dispose=False)
+        selQuery = Q()
+        for stat in assignStats:
+            if ( stat == "Submitted" ):
+                selQuery |= Q(status = AssignmentStatusField.SUBMITTED)
+            elif ( stat == "Approved" ):
+                selQuery |= Q(status = AssignmentStatusField.APPROVED)
+            elif ( stat == "Rejected" ):
+                selQuery |= Q(status = AssignmentStatusField.REJECTED)
+            else:
+                raise Exception("Invalid Assignment Status Filter: %s" % stat)
+        buildQuery &= selQuery
+
+        numResults,offset = self.get_list_args(kwargs)
+        # @note - I'm ordering by accepted because this should always
+        #   be available no matter the state of the assignment.
+        assignments = task.assignment_set.filter(
+            buildQuery
+        ).order_by("-accepted")[offset:(offset + numResults)]
+
+        cnt = assignments.count()
+        if ( cnt > 0 ):
+            nextToken = self.gen_next_token( offset + cnt )
+
+            resp = {
+                "NextToken" : nextToken,
+                "NumResults" : cnt,
+                "Assignments" : [ a.serialize() for a in assignments ]
+            }
+        else:
+            resp = {
+                "NumResults" : 0,
+                "Assignments" : []
+            }
+
+        return(resp)
 
     def ListWorkerBlocks(self, **kwargs):
         pass
