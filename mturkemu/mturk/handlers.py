@@ -64,6 +64,22 @@ class MTurkHandlers(object):
             offset = 0
         return(results, offset)
 
+    def prepare_list_response(self, name, offset, dataList, **kwargs):
+        """
+        Generate the standard list response for a set of
+        data items.
+        """
+        cnt = dataList.count()
+        resp = {
+            "NumResults" : cnt,
+            name : [ datum.serialize(**kwargs) for datum in dataList ]
+        }
+        if ( cnt > 0 ):
+            nextToken = self.gen_next_token( offset + cnt )
+            resp["NextToken"] = nextToken
+        return(resp)
+
+
     #######################
     # API Methods
     #######################
@@ -108,7 +124,25 @@ class MTurkHandlers(object):
         return({})
 
     def ListWorkersWithQualificationType(self, **kwargs):
-        pass
+        requester = kwargs["EmuRequester"]
+        qualId = kwargs["QualificationTypeId"]
+        stat = kwargs.get("Status", None)
+
+        numResults,offset = self.get_list_args(kwargs)
+
+        q = Q( qualification__aws_id = qualId )
+        if ( stat == "Granted" ):
+            q &= Q( active = True )
+        elif ( stat == "Revoked" ):
+            q &= Q( active = False )
+
+        grants = QualificationGrant.objects.filter(q).order_by(
+            "-granted"
+        )[offset:(offset+numResults)]
+
+        resp = self.prepare_list_response("Qualifications", offset, grants)
+
+        return(resp)
 
     def ListAssignmentsForHIT(self, **kwargs):
         requester = kwargs["EmuRequester"]
@@ -139,25 +173,22 @@ class MTurkHandlers(object):
             buildQuery
         ).order_by("-accepted")[offset:(offset + numResults)]
 
-        cnt = assignments.count()
-        if ( cnt > 0 ):
-            nextToken = self.gen_next_token( offset + cnt )
-
-            resp = {
-                "NextToken" : nextToken,
-                "NumResults" : cnt,
-                "Assignments" : [ a.serialize() for a in assignments ]
-            }
-        else:
-            resp = {
-                "NumResults" : 0,
-                "Assignments" : []
-            }
+        resp = self.prepare_list_response("Assignments", offset, assignments)
 
         return(resp)
 
     def ListWorkerBlocks(self, **kwargs):
-        pass
+        requester = kwargs["EmuRequester"]
+
+        numResults,offset = self.get_list_args(kwargs)
+
+        blocks = WorkerBlock.objects.filter(
+            requester = requester,
+            active = True
+            ).order_by("-created")[offset:(offset+numResults)]
+
+        resp = self.prepare_list_response("WorkerBlocks", offset, blocks)
+        return(resp)
 
     def CreateAdditionalAssignmentsForHIT(self, **kwargs):
         requester = kwargs["EmuRequester"]
@@ -250,7 +281,34 @@ class MTurkHandlers(object):
         raise NotImplementedError("No Notifications Yet")
 
     def ListQualificationTypes(self, **kwargs):
-        pass
+        requester = kwargs["EmuRequester"]
+
+        requestable = kwargs["MustBeRequestable"]
+        ownedByRequester = kwargs.get("MustBeOwnedByCaller", False)
+        query = kwargs.get("Query", None)
+
+        numResults,offset = self.get_list_args(kwargs)
+
+        # Build the query
+        q = Q(requestable = requestable) & Q(dispose=False)
+        if ( ownedByRequester ):
+            q &= Q(requester = requester)
+
+        if ( query is not None ):
+            searchQuery = (
+                Q(name__contains=query) |
+                Q(description__contains=query) |
+                Q(keywords__value__contains=query)
+            )
+            q &= searchQuery
+
+
+        quals =Qualification.objects.filter(q).order_by(
+            "-created"
+        )[offset:(offset+numResults)]
+
+        resp = self.prepare_list_response("QualificationTypes", offset, quals)
+        return(resp)
 
     def UpdateHITReviewStatus(self, **kwargs):
         requester = kwargs["EmuRequester"]
@@ -396,7 +454,26 @@ class MTurkHandlers(object):
         raise NotImplementedError("File Upload Not Implemented Yet")
 
     def ListQualificationRequests(self, **kwargs):
-        pass
+        requester = kwargs["EmuRequester"]
+        qualId = kwargs.get("QualificationTypeId", None)
+        if ( qualId is not None ):
+            qual = get_object_or_404(Qualification, aws_id = qualId)
+            if ( qual.requester != requester ):
+                raise PermissionDenied()
+
+        numResults,offset = self.get_list_args(kwargs)
+
+        if (qualId is not None):
+            q = Q( qualification__aws_id = qualId )
+        else:
+            q = Q( qualification__requester=requester )
+
+        reqs = QualificationRequest.objects.filter(q).order_by(
+            "-created"
+        )[offset:(offset+numResults)]
+
+        resp = self.prepare_list_response("QualificationRequests", offset, reqs)
+        return(resp)
 
     def GetHIT(self, **kwargs):
         HITId = kwargs["HITId"]
@@ -481,10 +558,45 @@ class MTurkHandlers(object):
         return({})
 
     def ListReviewableHITs(self, **kwargs):
-        pass
+        requester = kwargs["EmuRequester"]
+
+        taskTypeId = kwargs.get("HITTypeId", None)
+        stat = kwargs.get("Status", "Reviewable")
+
+        numResults,offset = self.get_list_args(kwargs)
+
+        q = Q(requester = requester) & Q(dispose=False)
+        if ( taskTypeId is not None ):
+            q &= Q(tasktype__aws_id = taskTypeId)
+
+        if ( stat == "Reviewable" ):
+            q &= Q(status = TaskStatusField.REVIEWABLE)
+        else:
+            q &= Q(status = TaskStatusField.REVIEWING)
+
+        tasks = Task.objects.filter(q).order_by(
+            "-created"
+        )[offset:(offset+numResults)]
+
+        resp = self.prepare_list_response(
+            "HITs", offset, tasks, includeAnnotation=True
+        )
+        return(resp)
 
     def ListHITs(self, **kwargs):
-        pass
+        requester = kwargs["EmuRequester"]
+        numResults,offset = self.get_list_args(kwargs)
+
+        tasks = Task.objects.filter(
+            requester = requester,
+            dispose=False,
+            ).order_by("-created")[offset:(offset+numResults)]
+
+        resp = self.prepare_list_response(
+            "HITs", offset, tasks, includeAnnotation=True
+        )
+
+        return(resp)
 
     def UpdateExpirationForHIT(self, **kwargs):
         requester = kwargs["EmuRequester"]
@@ -725,11 +837,36 @@ class MTurkHandlers(object):
 
     def ListBonusPayments(self, **kwargs):
         requester = kwargs["EmuRequester"]
+        HITId = kwargs.get("HITId", None)
+        AssignId = kwargs.get("AssignmentId", None)
+        if ( HITId is None and AssignId is None ):
+            raise Exception("Invalid HIT/Assignment Id Arguments")
 
-        # @note - I'm not totally sure how this method responds
-        #   are HITId and AssignmentId mutually exclusive ?
-        # Need to test on sandbox
-        raise NotImplementedError()
+        if ( HITId is not None and AssignId is not None ):
+            # @todo - check that this is the appropriate behavior with
+            #   the sandbox
+            raise Exception("HIT and Assignment Ids are Mutually Exclusive")
+
+        numResults,offset = self.get_list_args(kwargs)
+
+        if ( HITId is not None ):
+            # Check that the HIT is owned by the requester
+            task = get_object_or_404(Task, aws_id = HITId )
+            if ( task.requester != requester ):
+                raise PermissionDenied()
+            bonusQSet = BonusPayment.objects.filter(assignment__task = task)
+        else:
+            assignment = get_object_or_404(Assignment, aws_id = AssignId)
+            if ( assignment.task.requester != requester ):
+                raise PermissionDenied()
+            bonusQSet = BonusPayment.objects.filter(assignment = assignment)
+
+        respList = bonusQSet.order_by("-created")[offset:(offset+numResults)]
+
+        resp = self.prepare_list_response(
+            "BonusPayments", offset, respList
+        )
+        return(resp)
 
     def UpdateNotificationSettings(self, **kwargs):
         raise NotImplementedError("No Notifications Yet")
@@ -816,4 +953,21 @@ class MTurkHandlers(object):
         raise NotImplementedError("Review Policies Are Not Implemented Yet")
 
     def ListHITsForQualificationType(self, **kwargs):
-        pass
+        requester = kwargs["EmuRequester"]
+        qualId = kwargs["QualificationTypeId"]
+
+        qual = get_object_or_404(Qualification, aws_id=qualId)
+
+        numResults,offset = self.get_list_args(kwargs)
+        tasks = Task.objects.filter(
+            tasktype__qualifications__qualification = qual,
+            dispose=False,
+            ).order_by("-created")[offset:(offset+numResults)]
+
+        includeAnnots = (qual.requester == requester)
+
+        resp = self.prepare_list_response(
+            "HITs", offset, respList, includeAnnotation=includeAnnots
+        )
+
+        return(resp)
