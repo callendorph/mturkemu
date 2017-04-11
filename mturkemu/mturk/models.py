@@ -9,8 +9,6 @@ from django.db import models
 from django.db.models import Q
 from django.core.validators import validate_comma_separated_integer_list
 from django.contrib.auth.models import User
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
-from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
