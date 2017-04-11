@@ -243,6 +243,7 @@ class QualificationRequest(models.Model):
     aws_id = CustomerIdField()
     worker = models.ForeignKey(Worker, on_delete=models.CASCADE)
     qualification = models.ForeignKey(Qualification, on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now=False, auto_now_add = True)
 
     last_request = models.DateTimeField()
 
@@ -918,6 +919,7 @@ class WorkerBlock(models.Model):
 
     worker=models.ForeignKey(Worker, on_delete=models.CASCADE)
     requester = models.ForeignKey(Requester, on_delete=models.CASCADE)
+    created=models.DateTimeField(auto_now=False, auto_now_add = True)
 
     active = models.BooleanField(default=False)
     MAX_REASON_LEN = 256
