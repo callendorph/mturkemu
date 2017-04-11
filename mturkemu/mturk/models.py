@@ -20,7 +20,8 @@ from mturk.questions import *
 from mturk.quesformanswer import QFormAnswer
 
 from datetime import timedelta
-
+import random
+import string
 
 @receiver(post_save, dispatch_uid="aws_id_creation")
 def create_aws_id(sender, instance, **kwargs):
@@ -92,6 +93,13 @@ class Credential(models.Model):
     MAX_SECRET_KEY_LEN = 64
     secret_key = models.CharField(max_length=MAX_SECRET_KEY_LEN)
 
+    @staticmethod
+    def create_random_key(keylen):
+        ret = ''.join([
+            random.choice(string.ascii_uppercase + string.digits)
+            for x in range(0,keylen)
+        ])
+        return(ret)
 
 class KeywordTag(models.Model):
     """

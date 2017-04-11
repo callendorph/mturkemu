@@ -18,9 +18,6 @@ from mturk.models import *
 from mturk.utils import *
 from mturk.fields import *
 
-import random
-import string
-
 class RequesterHomePage(LoginRequiredMixin, MTurkBaseView):
     """
     """
@@ -491,18 +488,15 @@ class RequesterSettingsPage(LoginRequiredMixin, View):
 class RequesterCreateCredential(LoginRequiredMixin, View):
     """
     """
+
     def get(self, request):
 
         requester = get_object_or_404(Requester, user=request.user)
 
         aLen = 20
         sLen = 24
-        accessKey = ''.join(
-            [random.choice(string.ascii_uppercase + string.digits) for x in range(0,aLen)]
-        )
-        secretKey = ''.join(
-            [random.choice(string.ascii_uppercase + string.digits) for x in range(0,aLen)]
-        )
+        accessKey = Credential.create_random_key(aLen)
+        secretKey = Credential.create_random_key(aLen)
 
         cred = Credential.objects.create(
             requester = requester,
