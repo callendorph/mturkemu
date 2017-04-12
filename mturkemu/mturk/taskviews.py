@@ -234,7 +234,7 @@ class CreateTask(object):
         try:
             quesData = self.request["Question"]
             if ( len(quesData) > 65535 ):
-                raise RequestError("'Question' is too Long", 8)
+                raise QuestionTooLongError()
 
             ques = QuestionValidator()
             validQuestionTypes = [
@@ -242,7 +242,7 @@ class CreateTask(object):
             ]
             name = ques.determine_type(quesData)
             if ( name not in validQuestionTypes ):
-                raise RequestError("Invalid 'Question' Object: %s" % name)
+                raise TaskQuestionInvalidError()
 
             ques.validate(name, quesData)
             createParams["question"] = quesData
@@ -253,9 +253,7 @@ class CreateTask(object):
                 # @todo - when we get to this we will need these values
                 hitLayoutParams = self.request["HITLayoutParameters"]
             except KeyError:
-                raise RequestError(
-                    "Either 'Question' or 'HITLayoutId' is required", 6
-                )
+                raise MissingArgumentError("'Question' or 'HITLayoutId'")
 
         try:
             assignPolicy = self.request["AssignmentReviewPolicy"]
@@ -273,7 +271,7 @@ class CreateTask(object):
             uniqToken = self.request["UniqueRequestToken"]
             if ( len(uniqToken) != 0 ):
                 if ( Task.objects.filter(unique=uniqToken).exists() ):
-                    raise RequestError("HIT Already Exists", 7)
+                    raise DuplicateRequestError()
             createParams["unique"] = uniqToken
         except KeyError:
             pass

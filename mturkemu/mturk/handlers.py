@@ -7,9 +7,7 @@
 #
 #
 
-from django.shortcuts import get_object_or_404
-from django.core.exceptions import PermissionDenied
-from django.http import Http404
+from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.utils import timezone
 
 from mturk.models import *
@@ -20,6 +18,17 @@ from mturk.fields import *
 
 from datetime import timedelta
 import re
+
+def get_object_or_throw(model, **kwargs):
+    """
+    Similar to the 'get_object_or_404' but for throwing a
+    RequestError
+    """
+    try:
+        obj = model.objects.get(**kwargs)
+        return(obj)
+    except ObjectDoesNotExist:
+        raise DoesNotExistError(model)
 
 class MTurkHandlers(object):
 
@@ -53,7 +62,7 @@ class MTurkHandlers(object):
             offset = int(offsetStr)
             return(offset)
         else:
-            raise Exception("Invalid Next Token Format: %s" % token)
+            raise ValidationError(["Invalid Next Token Format: %s" % token])
 
     def get_list_args(self, kwargs):
         results = kwargs.get("MaxResults", MTurkHandlers.DEF_NUM_RESULTS)
@@ -87,9 +96,10 @@ class MTurkHandlers(object):
     def ApproveAssignment(self, **kwargs):
         requester = kwargs["EmuRequester"]
         assignId = kwargs["AssignmentId"]
+
         overrideReject = kwargs.get("OverrideRejection", False)
 
-        assign = get_object_or_404(
+        assign = get_object_or_throw(
             Assignment,
             aws_id = assignId
             )
@@ -98,10 +108,10 @@ class MTurkHandlers(object):
             raise PermissionDenied()
 
         if ( assign.is_accepted()):
-            raise RequestError("Assignment Not Ready for Decision Yet",15)
+            raise AssignmentNotSubmittedError()
 
         if ( assign.is_rejected() and not overrideReject ):
-            raise RequestError("Cannot override previous Rejection", 16)
+            raise AssignmentAlreadyRejectedError()
 
         if ( assign.is_approved() ):
             # @note - check what AWS actually does here
@@ -123,6 +133,7 @@ class MTurkHandlers(object):
     def ListWorkersWithQualificationType(self, **kwargs):
         requester = kwargs["EmuRequester"]
         qualId = kwargs["QualificationTypeId"]
+
         stat = kwargs.get("Status", None)
 
         numResults,offset = self.get_list_args(kwargs)
@@ -145,7 +156,7 @@ class MTurkHandlers(object):
         requester = kwargs["EmuRequester"]
         taskId = kwargs["HITId"]
 
-        task = get_object_or_404(Task, aws_id = taskId)
+        task = get_object_or_throw(Task, aws_id = taskId)
         if ( task.requester != requester ):
             raise PermissionDenied()
 
@@ -160,7 +171,8 @@ class MTurkHandlers(object):
             elif ( stat == "Rejected" ):
                 selQuery |= Q(status = AssignmentStatusField.REJECTED)
             else:
-                raise Exception("Invalid Assignment Status Filter: %s" % stat)
+                raise AssignmentInvalidStateError()
+
         buildQuery &= selQuery
 
         numResults,offset = self.get_list_args(kwargs)
@@ -192,13 +204,13 @@ class MTurkHandlers(object):
         taskId = kwargs["HITId"]
         addAssigns = kwargs["NumberOfAdditionalAssignments"]
 
-        task = get_object_or_404(Task, aws_id = taskId)
+        task = get_object_or_throw(Task, aws_id = taskId)
         if ( task.requester != requester ):
             raise PermissionDenied()
 
         newAssignsCount = task.max_assignments + addAssigns
         if ( task.max_assignments < 10 and newAssignCount >= 10 ):
-            raise RequestError("InvalidMaximumAssignmentsIncrease",17)
+            raise TaskInvalidAssignmentIncreaseError()
 
         task.max_assignments = newAssignsCount
         try:
@@ -207,7 +219,8 @@ class MTurkHandlers(object):
                 if ( task.unique == unique ):
                     # @note - No SAVE Op called yet so max_assignments
                     # will revert
-                    raise RequestError("Duplicate Unique Token", 19)
+                    raise DuplicateRequestError()
+
             task.unique = unique
         except KeyError:
             pass
@@ -219,7 +232,7 @@ class MTurkHandlers(object):
     def CreateWorkerBlock(self, **kwargs):
         requester = kwargs["EmuRequester"]
         workerId = kwargs["WorkerId"]
-        worker = get_object_or_404(
+        worker = get_object_or_throw(
             Worker,
             aws_id = workerId
             )
@@ -248,11 +261,11 @@ class MTurkHandlers(object):
         qualId = kwargs["QualificationId"]
         workerId = kwargs["WorkerId"]
 
-        qual = get_object_or_404(Qualification, aws_id = qualId)
+        qual = get_object_or_throw(Qualification, aws_id = qualId)
         if ( qual.requester != requester ):
             raise PermissionDenied()
 
-        qualGrant = get_object_or_404(
+        qualGrant = get_object_or_throw(
             QualificationGrant,
             worker__aws_id = workerId,
             qualification = qual
@@ -310,7 +323,7 @@ class MTurkHandlers(object):
         taskId = kwargs["HITId"]
         revert = kwargs.get("Revert", False)
 
-        task = get_object_or_404(Task, aws_id = taskId)
+        task = get_object_or_throw(Task, aws_id = taskId)
         if ( task.requester != requester ):
             raise PermissionDenied()
 
@@ -327,7 +340,7 @@ class MTurkHandlers(object):
         requester = kwargs["EmuRequester"]
         typeId = kwargs["HITTypeId"]
 
-        taskType = get_object_or_404(
+        taskType = get_object_or_throw(
             TaskType,
             requester = requester,
             aws_id = typeId
@@ -344,7 +357,7 @@ class MTurkHandlers(object):
     def DeleteHIT(self, **kwargs):
         requester = kwargs["EmuRequester"]
         HITId = kwargs["HITId"]
-        task = get_object_or_404(
+        task = get_object_or_throw(
             Task,
             requester = requester,
             aws_id = HITId
@@ -363,7 +376,7 @@ class MTurkHandlers(object):
                 name=name,
                 dispose=False,
             )
-            raise RequestError("Name is Not Unique", 1)
+            raise QualificationTypeAlreadyExistsError()
         except Qualification.DoesNotExist:
             pass
 
@@ -387,23 +400,22 @@ class MTurkHandlers(object):
         try:
             test = kwargs["Test"]
             if ( len(test) > 65535 ):
-                raise RequestError("Invalid Test QuestionForm: Too Long", 2)
+                raise QuestionTooLongError()
+
             if ( "TestDurationInSeconds" not in kwargs):
-                raise RequestError(
-                    "Missing required argument 'TestDurationInSeconds'", 3
-                )
+                raise MissingArgumentError("TestDurationInSeconds")
+
             testDuration = int(kwargs["TestDurationInSeconds"])
             if ( "AutoGranted" in kwargs ):
                 if ( kwargs["AutoGranted"] ):
-                    raise RequestError(
-                        "Qualification cannot have AutoGranted 'True' and have a Test QuestionForm", 5
+                    raise ValidationError(
+                        ["Qualification cannot have AutoGranted 'True' and have a Test QuestionForm"]
                     )
 
             name = q.determine_type(test)
             if ( name not in ["QuestionForm"]):
-                raise RequestError(
-                    "Invalid 'QuestionForm' object in 'Test' Parameter",10
-                    )
+                raise QualTestInvalidError()
+
             q.validate(name, test)
             createParams["test"] = test
             createParams["test_duration"] = timedelta(seconds=testDuration)
@@ -413,11 +425,12 @@ class MTurkHandlers(object):
         try:
             answerKey = kwargs["AnswerKey"]
             if ( len(answerKey) > 65535 ):
-                raise RequestError("Invalid AnswerKey: Too Long", 4)
+                raise AnswerTooLongError()
 
             name = q.determine_type(answerKey)
             if ( name not in ["AnswerKey"]):
-                raise RequestError("Invalid object in 'AnswerKey' Parameter", 11)
+                raise QualAnswerInvalidError()
+
             q.validate(name, answerKey)
             createParams["answer"] = answerKey
 
@@ -453,7 +466,7 @@ class MTurkHandlers(object):
         requester = kwargs["EmuRequester"]
         qualId = kwargs.get("QualificationTypeId", None)
         if ( qualId is not None ):
-            qual = get_object_or_404(Qualification, aws_id = qualId)
+            qual = get_object_or_throw(Qualification, aws_id = qualId)
             if ( qual.requester != requester ):
                 raise PermissionDenied()
 
@@ -473,7 +486,7 @@ class MTurkHandlers(object):
 
     def GetHIT(self, **kwargs):
         HITId = kwargs["HITId"]
-        task = get_object_or_404(Task, aws_id = HITId)
+        task = get_object_or_throw(Task, aws_id = HITId)
 
         return({
             "HIT" : task.serialize()
@@ -488,7 +501,7 @@ class MTurkHandlers(object):
         requester = kwargs["EmuRequester"]
         workerId = kwargs["WorkerId"]
 
-        worker = get_object_or_404(
+        worker = get_object_or_throw(
             Worker,
             aws_id = workerId
             )
@@ -507,6 +520,8 @@ class MTurkHandlers(object):
             block.save()
 
         except WorkerBlock.DoesNotExist:
+            # @todo - do we need to raise an error if there
+            # was not workerblock to remove?
             pass
 
         return({})
@@ -530,7 +545,7 @@ class MTurkHandlers(object):
         requester = kwargs["EmuRequester"]
         assignId = kwargs["AssignmentId"]
 
-        assign = get_object_or_404(
+        assign = get_object_or_throw(
             Assignment,
             aws_id = assignId
             )
@@ -539,12 +554,18 @@ class MTurkHandlers(object):
             raise PermissionDenied()
 
         if ( not assign.is_submitted() ):
-            RequestError("Assignment Not Submitted", 14)
+            raise AssignmentNotSubmittedError()
+
+        # @todo - need to check if the service throws an error
+        # if the assignment has already been approved.
 
         assign.status = AssignmntStatusField.REJECTED
         assign.rejected = timezone.now()
         try:
             feedback = kwargs["RequesterFeedback"]
+            # @todo - I need to filter feedback and throw an error
+            #    Needs to be less than 1024 chars and
+            #    needs to filter ASCII 0-8,11,12, 14-31,
             assign.feedback = feedback
         except KeyError:
             pass
@@ -600,7 +621,7 @@ class MTurkHandlers(object):
         taskId = kwargs["HITId"]
         expireAt = kwargs["ExpireAt"]
 
-        task = get_object_or_404(Task, aws_id = taskId)
+        task = get_object_or_throw(Task, aws_id = taskId)
         if ( task.requester != requester ):
             raise PermissionDenied()
 
@@ -621,7 +642,7 @@ class MTurkHandlers(object):
         requester = kwargs["EmuRequester"]
         reqId = kwargs["QualificationRequestId"]
 
-        req = get_object_or_404(
+        req = get_object_or_throw(
             QualificationRequester,
             aws_id = reqId
             )
@@ -632,7 +653,7 @@ class MTurkHandlers(object):
         if ( not req.is_pending() ):
             # @todo - check if the server responds like this when
             #    the request is idle or already approved/rejected
-            raise RequestError("Invalid Qualification State", 20)
+            raise QualReqInvalidStateError()
 
         req.state = QualReqStatusField.REJECTED
         req.reason = kwargs.get("Reason", "")
@@ -655,13 +676,13 @@ class MTurkHandlers(object):
         except KeyError:
             sendNotif = False
 
-        qual = get_object_or_404(
+        qual = get_object_or_throw(
             Qualification,
             requester = requester,
             aws_id = qualId
             )
 
-        worker = get_object_or_404(Worker, aws_id = workerId)
+        worker = get_object_or_throw(Worker, aws_id = workerId)
 
         # First check if a worker qualification grant already exists
         try:
@@ -687,7 +708,7 @@ class MTurkHandlers(object):
         requester = kwargs["EmuRequester"]
         qualId = kwargs["QualificationTypeId"]
 
-        qual = get_object_or_404(Qualification, aws_id = qualId)
+        qual = get_object_or_throw(Qualification, aws_id = qualId)
         if ( qual.requester != requester ):
             raise PermissionDenied()
 
@@ -737,8 +758,8 @@ class MTurkHandlers(object):
         workerId = kwargs["WorkerId"]
         assignId = kwargs["AssignmentId"]
 
-        worker = get_object_or_404(Worker, aws_id = workerId)
-        assign = get_object_or_404(Assignment, aws_id = assignId)
+        worker = get_object_or_throw(Worker, aws_id = workerId)
+        assign = get_object_or_throw(Assignment, aws_id = assignId)
 
         if ( assign.worker != worker or assign.task.requester != requester):
             raise PermissionDenied()
@@ -764,16 +785,15 @@ class MTurkHandlers(object):
                 ).exists()
 
                 if ( hasExisting ):
-                    raise RequestError(
-                        "Duplicate UniqueRequestToken: %s" % unique,13
-                    )
+                    raise DuplicateRequestError()
+
             createParams["unique"] = unique
         except KeyError:
             pass
 
         amount = float(kwargs["BonusAmount"])
         if ( requester.balance < amount ):
-            raise RequestError("Requester Insufficient Funds", 14)
+            raise RequesterInsufficientFundsError()
 
         createParam["amount"] = amount
 
@@ -786,7 +806,7 @@ class MTurkHandlers(object):
         requester = kwargs["EmuRequester"]
         assignId = kwargs["AssignmentId"]
 
-        assign = get_object_or_404(Assignment, aws_id = assignId)
+        assign = get_object_or_throw(Assignment, aws_id = assignId)
 
         if ( assign.requester.id != requester.id ):
             raise PermissionDenied()
@@ -801,7 +821,7 @@ class MTurkHandlers(object):
         requester = kwargs["EmuRequester"]
         qualId = kwargs["QualificationTypeId"]
 
-        q = get_object_or_404(
+        q = get_object_or_throw(
             Qualification,
             requester = requester,
             aws_id = qualId
@@ -810,11 +830,6 @@ class MTurkHandlers(object):
         q.active = False
         q.dispose = True
         q.save()
-
-        # @todo - We should do some queries to see if we
-        #    can delete this qualification for realz
-        #    For now, it will just be left so that any
-        #    active Tasks, etc can't continue to reference it.
 
         return({})
 
@@ -833,23 +848,23 @@ class MTurkHandlers(object):
         HITId = kwargs.get("HITId", None)
         AssignId = kwargs.get("AssignmentId", None)
         if ( HITId is None and AssignId is None ):
-            raise Exception("Invalid HIT/Assignment Id Arguments")
+            raise ValidationError(["Missing required argument of either 'HITId' or 'AssignmentId'"])
 
         if ( HITId is not None and AssignId is not None ):
             # @todo - check that this is the appropriate behavior with
             #   the sandbox
-            raise Exception("HIT and Assignment Ids are Mutually Exclusive")
+            raise ValidationError(["Request must have either 'HITId' or 'AssignmentId', not both."])
 
         numResults,offset = self.get_list_args(kwargs)
 
         if ( HITId is not None ):
             # Check that the HIT is owned by the requester
-            task = get_object_or_404(Task, aws_id = HITId )
+            task = get_object_or_throw(Task, aws_id = HITId )
             if ( task.requester != requester ):
                 raise PermissionDenied()
             bonusQSet = BonusPayment.objects.filter(assignment__task = task)
         else:
-            assignment = get_object_or_404(Assignment, aws_id = AssignId)
+            assignment = get_object_or_throw(Assignment, aws_id = AssignId)
             if ( assignment.task.requester != requester ):
                 raise PermissionDenied()
             bonusQSet = BonusPayment.objects.filter(assignment = assignment)
@@ -869,17 +884,17 @@ class MTurkHandlers(object):
         workerId = kwargs["WorkerId"]
         qualid = kwargs["QualificationTypeId"]
 
-        worker = get_object_or_404(Worker, aws_id = workerId)
-        qual = get_object_or_404(Qualification, aws_id = qualId)
+        worker = get_object_or_throw(Worker, aws_id = workerId)
+        qual = get_object_or_throw(Qualification, aws_id = qualId)
 
         if ( qual.requester != requester ):
             raise PermissionDenied()
 
-        grant = get_object_or_404(
+        grant = get_object_or_throw(
             QualificationGrant,
             worker = worker,
             qualification = qual
-            )
+        )
 
         # @todo - check how AWS responds if the grant
         #   has already been revoked.
@@ -898,7 +913,7 @@ class MTurkHandlers(object):
     def GetQualificationType(self, **kwargs):
         qualId = kwargs["QualificationTypeId"]
 
-        qual = get_object_or_404(Qualification, aws_id = qualId)
+        qual = get_object_or_throw(Qualification, aws_id = qualId)
         return({
             "QualificationType": qual.serialize()
         })
@@ -908,13 +923,13 @@ class MTurkHandlers(object):
         reqId = kwargs["QualificationRequestId"]
         value = kwargs["IntegerValue"]
 
-        req = get_object_or_404(QualificationRequest, aws_id = reqId)
+        req = get_object_or_throw(QualificationRequest, aws_id = reqId)
 
         if ( req.qualification.requester != requester ):
             raise PermissionDenied()
 
         if ( req.state != QualReqStatusField.PENDING ):
-            raise RequestError("Qual Request in Wrong State to Approve", 21)
+            raise QualReqInvalidStateError()
 
         # First check if there is a qualification grant for this
         # worker with these parameters, if so we will update it
@@ -923,7 +938,7 @@ class MTurkHandlers(object):
             grant = QualificationGrant.objects.get(
                 worker = req.worker,
                 qualification = req.qualification,
-                )
+            )
             grant.value = value
             grant.active = True
         except QualificationGrant.DoesNotExist:
@@ -931,7 +946,7 @@ class MTurkHandlers(object):
                 worker = req.worker,
                 qualification = req.qualification,
                 value = value
-                )
+            )
 
         grant.save()
 
@@ -941,7 +956,6 @@ class MTurkHandlers(object):
         return({})
 
 
-
     def ListReviewPolicyResultsForHIT(self, **kwargs):
         raise NotImplementedError("Review Policies Are Not Implemented Yet")
 
@@ -949,13 +963,13 @@ class MTurkHandlers(object):
         requester = kwargs["EmuRequester"]
         qualId = kwargs["QualificationTypeId"]
 
-        qual = get_object_or_404(Qualification, aws_id=qualId)
+        qual = get_object_or_throw(Qualification, aws_id=qualId)
 
         numResults,offset = self.get_list_args(kwargs)
         tasks = Task.objects.filter(
             tasktype__qualifications__qualification = qual,
             dispose=False,
-            ).order_by("-created")[offset:(offset+numResults)]
+        ).order_by("-created")[offset:(offset+numResults)]
 
         includeAnnots = (qual.requester == requester)
 

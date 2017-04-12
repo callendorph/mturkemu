@@ -15,6 +15,7 @@ from mturk.handlers import MTurkHandlers
 
 from mturk.models import *
 from mturk.forms import UserSignupForm
+from mturk.errors import RequestError
 
 import re
 import json
@@ -153,12 +154,30 @@ class MTurkMockAPI(View):
         reqParams["EmuRequester"] = requester
 
         method = getattr(self._handlers, target)
-        respParams = method(**reqParams)
+        try:
+            respParams = method(**reqParams)
 
-        outShape = opModel.output_shape
-        validate_parameters(respParams, outShape)
+            outShape = opModel.output_shape
+            validate_parameters(respParams, outShape)
 
-        resp = JsonResponse(respParams)
+            resp = JsonResponse(respParams)
+
+        except RequestError as exc:
+            # We want to return a json response with a
+            # status code = 400 (Bad Request)
+            respParams = {
+                "__type": RequestError.__name__,
+            }
+            respParams.update( exc.serialize() )
+            resp = JsonResponse(respParams, status=400)
+        except Exception as exc:
+            respParams = {
+                "__type" : "ServiceFault",
+                "Message" : "Service Fault: %s" % str(exc),
+                "TurkErrorCode" : "Unknown"
+            }
+            resp = JsonResponse(respParams, status=500)
+
         resp["x-amzn-requestid"] = uuid.uuid1()
         resp["content-type"] = EXPECT_CONTENT_TYPE
         return(resp)

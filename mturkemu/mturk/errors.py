@@ -13,8 +13,141 @@ class RequestError(Exception):
     def serialize(self):
         return({
             "Message" : self.msg,
-            "TurkErrorCode" : "%d" % self.code,
+            "TurkErrorCode" : self.code,
         })
+
+ERROR_CODE_PREFIX = "AWS.MechanicalTurk"
+
+class MissingArgumentError(RequestError):
+    def __init__(self, arg):
+        super().__init__(
+            "Request is missing a required argument: %s" % arg,
+            "%s.MissingArgument" % ERROR_CODE_PREFIX
+        )
+
+class ValidationError(RequestError):
+    """
+    General Purpose error returned by mturk for checking input args -
+    """
+    def __init__(self, errors):
+        errContent = ", ".join(errors)
+        super().__init__(
+            "Validation Error: %d errors: %s" % (len(errors), errContent),
+            "%s.ValidationError" % ERROR_CODE_PREFIX
+        )
+
+class DuplicateRequestError(RequestError):
+    """
+    This exception is for the case when an object is created with
+    a unique request token and is an actual duplicate.
+    """
+    def __init__(self):
+        super().__init__(
+            "Request containing a unique request token is a duplicate",
+            "%s.DuplicateRequest" % ERROR_CODE_PREFIX
+        )
+
+class DoesNotExistError(RequestError):
+    """
+    When an object accessed by AWS ID does not exist.
+    """
+    def __init__(self, model, pk=""):
+        super().__init__(
+            "%s %s does not exist.",
+            "%s.DoesNotExist" % ERROR_CODE_PREFIX
+        )
+
+class RequesterInsufficientFundsError(RequestError):
+    def __init__(self):
+        super().__init__(
+            "Requester has insufficient funds in Account",
+            "%s.InsufficientFunds" % ERROR_CODE_PREFIX
+        )
+
+class QuestionTooLongError(RequestError):
+    def __init__(self):
+        super().__init__(
+            "Questions must be less than 65535 Bytes",
+            "%s.QuestionTooLong" % ERROR_CODE_PREFIX
+            )
+
+class AnswerTooLongError(RequestError):
+    def __init__(self):
+        super().__init__(
+            "Answer must be less than 65535 Bytes",
+            "%s.AnswerTooLong" % ERROR_CODE_PREFIX
+            )
+
+# Qualification Errors
+class QualificationTypeAlreadyExistsError(RequestError):
+    def __init__(self):
+        super().__init__(
+            "You have already created a QualificationType with this name. A QualifcationType's name must be unique among all of the QualificationTypes created by the same user.",
+            "%s.QualficationTypeAlreadyExists" % ERROR_CODE_PREFIX
+            )
+
+class QualTestInvalidError(RequestError):
+    def __init__(self):
+        super().__init__(
+            "Qualification Test must be an XML object of type 'QuestionForm'",
+            "%s.QualTestInvalid" % ERROR_CODE_PREFIX
+            )
+
+class QualAnswerInvalidError(RequestError):
+    def __init__(self):
+        super().__init__(
+            "Qualification AnswerKey must be an XML object of type 'AnswerKey'",
+            "%s.QualAnswerKeyInvalid" % ERROR_CODE_PREFIX
+            )
+
+class QualReqInvalidStateError(RequestError):
+    def __init__(self):
+        super().__init__(
+            "Qualification Request Is in Invalid State for Operation",
+            "%s.QualReqInvalidState" % ERROR_CODE_PREFIX
+            )
+
+
+# Assignment Errors
+
+class AssignmentNotSubmittedError(RequestError):
+    def __init__(self):
+        super().__init__(
+            "Request Attempts to access an Assignment that has not been submitted yet.",
+            "%s.AssignmentNotSubmitted" % ERROR_CODE_PREFIX
+        )
+
+class AssignmentAlreadyRejectedError(RequestError):
+    def __init__(self):
+        super().__init__(
+            "Request Attempts to approve an assignment that has already been rejected. Use the 'OverrideRejection' argument to allow.",
+            "%s.AssignmentAlreadyRejected" % ERROR_CODE_PREFIX
+        )
+
+class AssignmentInvalidStateError(RequestError):
+    def __init__(self, state):
+        super().__init__(
+            "Request Attempts to filter assignments using an invalid state: %s" % state,
+            "%s.AssignmentInvalidStateFilter" % ERROR_CODE_PREFIX
+        )
+
+# Task Errors
+
+class TaskInvalidAssignmentIncreaseError(RequestError):
+    def __init__(self):
+        super().__init__(
+            "Request Attempts to increase the number of assignments in a task by an invalid amount.",
+            "%s.TaskInvalidAssignmentIncrease" % ERROR_CODE_PREFIX
+        )
+
+class TaskQuestionInvalidError(RequestError):
+    def __init__(self):
+        super().__init__(
+            "Task Question must be an XML object of type 'HTMLQuestion', 'ExternalQuestion', or 'QuestionForm'",
+            "%s.QuestionInvalid" % ERROR_CODE_PREFIX
+            )
+
+# XML Processing Errors
 
 class InvalidTagError(Exception):
     def __init__(self, tag):

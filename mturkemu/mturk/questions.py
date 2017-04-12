@@ -111,12 +111,7 @@ class QuestionValidator(object):
         root = etree.fromstring(content, parser)
         return(root)
 
-    def validate(self, name, content):
-        """
-        Validate a question content XML object against
-        known schemas and return the name of the xml object.
-        Throws an exception is validation fails.
-        """
+    def _validate(self, name, content):
         root = self.parse(name, content)
         if ( name == "QuestionForm" ):
             # We need to be a little careful and make sure that the
@@ -134,6 +129,16 @@ class QuestionValidator(object):
                                 raise Exception("Invalid Question Identifier: Forbidden Value")
         return( name )
 
+    def validate(self, name, content):
+        """
+        Validate a question content XML object against
+        known schemas and return the name of the xml object.
+        Throws an exception is validation fails.
+        """
+        try:
+            name = self._validate(name,content)
+        except Exception as exc:
+            raise ValidationError(["Invalid XML: %s" % str(exc)])
 
     def extract(self, content):
         name = self.determine_type(content)
