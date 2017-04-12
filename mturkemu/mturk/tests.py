@@ -6,6 +6,7 @@
 # run when the `./manage.py test` command is run.
 #
 
-from django.test import TestCase
-
-from mturk.testsuite.api import *
+from mturk.testsuite.api.basics import *
+from mturk.testsuite.api.qualifications import *
+from mturk.testsuite.api.workers import *
+from mturk.testsuite.api.tasks import *

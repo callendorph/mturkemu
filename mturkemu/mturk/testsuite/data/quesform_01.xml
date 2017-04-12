@@ -1,0 +1,25 @@
+<QuestionForm xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2005-10-01/QuestionForm.xsd">
+  <Overview>
+    <Text>
+      Example Question Form
+    </Text>
+  </Overview>
+  <Question>
+    <QuestionIdentifier>my_question_id</QuestionIdentifier>
+    <DisplayName>My Question</DisplayName>
+    <IsRequired>true</IsRequired>
+    <QuestionContent>
+      <Text>
+        What is your name?
+      </Text>
+    </QuestionContent>
+    <AnswerSpecification>
+      <FreeTextAnswer>
+        <Constraints>
+          <Length minLength="1" maxLength="12" />
+        </Constraints>
+        <DefaultText>Charlie</DefaultText>
+      </FreeTextAnswer>
+    </AnswerSpecification>
+  </Question>
+</QuestionForm>

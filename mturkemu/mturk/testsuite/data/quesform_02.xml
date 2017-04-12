@@ -1,0 +1,71 @@
+<QuestionForm xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2005-10-01/QuestionForm.xsd">
+  <Overview>
+    <Text>
+      Example Question Form
+    </Text>
+  </Overview>
+  <Question>
+    <QuestionIdentifier>favorite</QuestionIdentifier>
+    <DisplayName>Favorite Color</DisplayName>
+    <IsRequired>true</IsRequired>
+    <QuestionContent>
+      <Text>
+        If there can only be one color...
+      </Text>
+    </QuestionContent>
+    <AnswerSpecification>
+      <SelectionAnswer>
+        <StyleSuggestion>radiobutton</StyleSuggestion>
+        <Selections>
+          <Selection>
+            <SelectionIdentifier>blue</SelectionIdentifier>
+            <Text>Blue</Text>
+          </Selection>
+          <Selection>
+            <SelectionIdentifier>green</SelectionIdentifier>
+            <Text>Green</Text>
+          </Selection>
+          <Selection>
+            <SelectionIdentifier>red</SelectionIdentifier>
+            <Text>Red</Text>
+          </Selection>
+        </Selections>
+      </SelectionAnswer>
+    </AnswerSpecification>
+  </Question>
+
+  <Question>
+    <QuestionIdentifier>acceptible</QuestionIdentifier>
+    <DisplayName>Acceptible Colors</DisplayName>
+    <IsRequired>true</IsRequired>
+    <QuestionContent>
+      <Text>
+        Select 1 or more acceptible colors
+      </Text>
+    </QuestionContent>
+    <AnswerSpecification>
+      <SelectionAnswer>
+        <StyleSuggestion>checkbox</StyleSuggestion>
+        <Selections>
+          <Selection>
+            <SelectionIdentifier>blue</SelectionIdentifier>
+            <Text>Blue</Text>
+          </Selection>
+          <Selection>
+            <SelectionIdentifier>green</SelectionIdentifier>
+            <Text>Green</Text>
+          </Selection>
+          <Selection>
+            <SelectionIdentifier>red</SelectionIdentifier>
+            <Text>Red</Text>
+          </Selection>
+          <Selection>
+            <SelectionIdentifier>orange</SelectionIdentifier>
+            <Text>Orange</Text>
+          </Selection>
+        </Selections>
+      </SelectionAnswer>
+    </AnswerSpecification>
+  </Question>
+
+</QuestionForm>
