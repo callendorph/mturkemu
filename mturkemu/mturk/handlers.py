@@ -87,10 +87,7 @@ class MTurkHandlers(object):
     def ApproveAssignment(self, **kwargs):
         requester = kwargs["EmuRequester"]
         assignId = kwargs["AssignmentId"]
-        try:
-            overrideReject = kwargs["OverrideRejection"]
-        except KeyError:
-            overrideReject = False
+        overrideReject = kwargs.get("OverrideRejection", False)
 
         assign = get_object_or_404(
             Assignment,
@@ -255,13 +252,11 @@ class MTurkHandlers(object):
         if ( qual.requester != requester ):
             raise PermissionDenied()
 
-        try:
-            qualGrant = QualificationGrant.objects.get(
-                worker__aws_id = workerId,
-                qualification = qual
+        qualGrant = get_object_or_404(
+            QualificationGrant,
+            worker__aws_id = workerId,
+            qualification = qual
             )
-        except QualificationGrant.DoesNotExist:
-            raise Http404()
 
         return({
             "Qualification" : qualGrant.serialize()
@@ -349,10 +344,11 @@ class MTurkHandlers(object):
     def DeleteHIT(self, **kwargs):
         requester = kwargs["EmuRequester"]
         HITId = kwargs["HITId"]
-        task = Task.objects.get(requester = requester, aws_id = HITId)
-        # This may be too harsh - perhaps we want to transition to
-        # disposed state instead ? Might allow us to keep data
-        # for testing and diagnostics
+        task = get_object_or_404(
+            Task,
+            requester = requester,
+            aws_id = HITId
+            )
         task.dispose = True
         task.save()
         return({})
@@ -650,10 +646,7 @@ class MTurkHandlers(object):
         qualId = kwargs["QualificationTypeId"]
         workerId = kwargs["WorkerId"]
 
-        try:
-            value = kwargs["IntegerValue"]
-        except KeyError:
-            value = 1
+        value = kwargs.get("IntegerValue", 1)
 
         try:
             sendNotif = kwargs["SendNotification"]
