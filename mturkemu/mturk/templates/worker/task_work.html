@@ -16,7 +16,7 @@
 
     {# Task Work Content Goes Here - Depends on the type of tasks #}
     {% if quesType == "QuestionForm" %}
-    {% include "worker/quesform/form.html" with form=form %}
+    {% include "worker/quesform/form.html" with form=form url=url %}
     {% else %}
     {% include "worker/iframe_question.html" with task=task ext=ext %}
     {% endif %}

@@ -1,5 +1,5 @@
 <div>
-  <form method="POST" action="{{form.url}}">
+  <form method="POST" action="{{url}}">
     {% csrf_token %}
 
     {% for content in form.contents %}

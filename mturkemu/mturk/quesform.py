@@ -397,8 +397,7 @@ class QuestionForm(object):
     """
     XML QuestionForm object
     """
-    def __init__(self, url, root):
-        self.url = url
+    def __init__(self, root):
 
         self.contents = []
         self.parse(root)

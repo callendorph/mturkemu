@@ -60,16 +60,16 @@ class WorkerCompleteQualTest(LoginRequiredMixin, MTurkBaseView):
         url = reverse("worker-qual-test", kwargs={"req_id" : req_id})
 
         q = QuestionValidator()
-        name = q.determine_type(req.qualification.test)
+        name,form = q.extract(req.qualification.test)
         if ( name != "QuestionForm" ):
             raise SuspiciousOperation("Invalid Qualification Question Object")
-        quesRoot = self.parse(name, req.qualification.test)
 
-        form = QuestionForm( url, quesRoot )
+        url = reverse("worker-qual-test", kwargs={"req_id" : req_id})
 
         cxt = {
             "active" : "quals",
             "worker" : worker,
+            "url" : url,
             "form" : form
         }
 

@@ -148,8 +148,9 @@ class QuestionValidator(object):
             ret = ExternalQuestion(root)
         elif ( name == "HTMLQuestion" ):
             ret = HTMLQuestion(root)
+        elif ( name == "QuestionForm" ):
+            ret = QuestionForm(root)
         else:
-            # We don't make the form
-            ret = root
+            raise Exception("Unknown XML Object")
 
         return(name, ret)

@@ -383,8 +383,8 @@ class WorkerTaskInfoPage(LoginRequiredMixin, MTurkBaseView):
 
         cxt["quesType"] = quesType
         if ( quesType == "QuestionForm" ):
-            url = reverse("worker-task-submit", kwargs={"task_id": task_id})
-            cxt["form"] = QuestionForm(url, quesData)
+            cxt["url"] = reverse("worker-task-submit", kwargs={"task_id": task_id})
+            cxt["form"] = quesData
         elif ( quesType == "ExternalQuestion" ):
             submitUrl = reverse("worker-ext-submit")
             urlArgs = urlencode({
