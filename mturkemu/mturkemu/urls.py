@@ -12,7 +12,7 @@ from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 
 from mturk.views import MTurkMockAPI, MTurkCreateUser
-from mturk.workers import WorkerExternalSubmit
+from mturk.worker.views import WorkerExternalSubmit
 from mturk.urls import workerPatterns, requesterPatterns
 
 urlpatterns = [

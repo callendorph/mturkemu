@@ -7,8 +7,7 @@
 #
 from django.conf.urls import url
 
-from mturk.workers import *
-from mturk.qualview import *
+from mturk.worker.views import *
 
 workerPatterns = [
     url('^home/$', WorkerHomePage.as_view(), name="worker-home"),
