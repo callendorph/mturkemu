@@ -882,7 +882,7 @@ class MTurkHandlers(object):
     def DisassociateQualificationFromWorker(self, **kwargs):
         requester = kwargs["EmuRequester"]
         workerId = kwargs["WorkerId"]
-        qualid = kwargs["QualificationTypeId"]
+        qualId = kwargs["QualificationTypeId"]
 
         worker = get_object_or_throw(Worker, aws_id = workerId)
         qual = get_object_or_throw(Qualification, aws_id = qualId)
