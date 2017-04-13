@@ -825,8 +825,8 @@ class Assignment(models.Model):
         @return list of dict objects, each being a set of
             key-value pairs for the question Id and submitted answer
         """
-        ans = QFormAnswer(self.answer)
-        return(ans.answers)
+        ans = QFormAnswer()
+        return(ans.parse(self.answer))
 
     def prop_table(self):
         """
