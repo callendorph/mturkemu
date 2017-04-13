@@ -10,6 +10,8 @@ from django.conf import settings
 
 from mturk.models import *
 from mturk.testsuite.utils import RequesterLiveTestCase
+from mturk.worker.actor import WorkerActor
+from mturk.worker.QualsActor import *
 
 import os.path
 
@@ -278,3 +280,196 @@ class QualificationTests(RequesterLiveTestCase):
         self.assertEqual(numResults, 0)
         quals = resp["QualificationTypes"]
         self.assertEqual( len(quals), 0 )
+
+
+    def test_qual_auto_grant(self):
+        """
+        This test is intended to check the qualification auto grant
+        process for a worker's request.
+        """
+
+        worker1_client = self.create_new_client("test2")
+        worker1 = Worker.objects.get(user__username = "test2")
+
+        actor = WorkerActor(worker1)
+
+        # Create a qual with auto grant
+        name = "zxcv"
+        desc = "This is the other qual"
+        agval = 10
+        resp = self.client.create_qualification_type(
+            Name=name,
+            Description=desc,
+            QualificationTypeStatus = "Active",
+            AutoGranted = True,
+            AutoGrantedValue= agval
+            )
+
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], True)
+        self.assertEqual(obj["AutoGrantedValue"], agval)
+
+        qualId = obj["QualificationTypeId"]
+
+        # Use the worker to request the qualification
+        qual = Qualification.objects.get( aws_id = qualId )
+        req = actor.create_qual_request(qual)
+        self.assertTrue( req.is_idle() )
+        self.assertEqual( req.worker, worker1 )
+        self.assertEqual( req.qualification, qual )
+
+        grant = actor.process_qual_request(qual, req)
+        self.assertTrue( grant is not None )
+        self.assertEqual( grant.value, agval )
+        self.assertTrue( req.is_approved() )
+
+        # Attempt to request again - should throw
+        with self.assertRaises(QualHasActiveGrant):
+            req = actor.create_qual_request(qual)
+
+
+        # Check that this grant shows up in the list
+        # via the requester API
+
+        resp = self.client.list_workers_with_qualification_type(
+            QualificationTypeId = qualId,
+            Status="Granted",
+            MaxResults = 10
+            )
+
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual( numResults, 1 )
+        grants = resp["Qualifications"]
+        self.assertEqual( len(grants), 1 )
+
+        grant = grants[0]
+        self.assertEqual( grant["WorkerId"], worker1.aws_id)
+        self.assertEqual( grant["QualificationTypeId"], qualId)
+        self.assertEqual( grant["Status"], "Granted" )
+
+        resp = self.client.list_workers_with_qualification_type(
+            QualificationTypeId = qualId,
+            Status="Revoked",
+            MaxResults = 10
+            )
+
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual( numResults, 0 )
+        grants = resp["Qualifications"]
+        self.assertEqual( len(grants), 0 )
+
+        # Revoke the grant of this qualification
+        # via the requester API
+        reason = "Bad Reason"
+        resp = self.client.disassociate_qualification_from_worker(
+            WorkerId = worker1.aws_id,
+            QualificationTypeId = qualId,
+            Reason= reason
+            )
+
+        self.is_ok(resp)
+
+        # Check that this grant shows as revoked in the list
+        # via the requester API
+
+        resp = self.client.list_workers_with_qualification_type(
+            QualificationTypeId = qualId,
+            Status="Granted",
+            MaxResults = 10
+            )
+
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual( numResults, 0 )
+        grants = resp["Qualifications"]
+        self.assertEqual( len(grants), 0 )
+
+        resp = self.client.list_workers_with_qualification_type(
+            QualificationTypeId = qualId,
+            Status="Revoked",
+            MaxResults = 10
+            )
+
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual( numResults, 1 )
+        grants = resp["Qualifications"]
+        self.assertEqual( len(grants), 1 )
+
+        grant = grants[0]
+        self.assertEqual( grant["WorkerId"], worker1.aws_id)
+        self.assertEqual( grant["QualificationTypeId"], qualId)
+        self.assertEqual( grant["Status"], "Revoked" )
+
+        # Check that the worker can't request the grant
+        # because it has been revoked.
+
+        with self.assertRaises(QualPermamentGrantBlock):
+            req = actor.create_qual_request(qual)
+
+
+        # Create a new worker and auto grant so that we
+        # have both a worker with a grant and a worker
+        # with a revoke
+
+        worker2_client = self.create_new_client("test3")
+        worker2 = Worker.objects.get(user__username = "test3")
+
+        actor2 = WorkerActor(worker2)
+
+        req = actor2.create_qual_request(qual)
+        self.assertTrue( req.is_idle() )
+        self.assertEqual( req.worker, worker2 )
+        self.assertEqual( req.qualification, qual )
+
+        grant = actor2.process_qual_request(qual, req)
+        self.assertTrue( grant is not None )
+        self.assertEqual( grant.value, agval )
+        self.assertTrue( req.is_approved() )
+
+        # List out all grants
+        resp = self.client.list_workers_with_qualification_type(
+            QualificationTypeId = qualId,
+            MaxResults = 10
+            )
+
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual( numResults, 2 )
+        grants = resp["Qualifications"]
+        self.assertEqual( len(grants), 2 )
+
+        revoked = [x for x in grants if x["Status"] == "Revoked" ]
+        granted = [x for x in grants if x["Status"] == "Granted" ]
+
+        self.assertEqual( len(revoked), 1 )
+        self.assertEqual( len(granted), 1 )
+
+        grant = revoked[0]
+        self.assertEqual( grant["WorkerId"], worker1.aws_id)
+        self.assertEqual( grant["QualificationTypeId"], qualId)
+        self.assertEqual( grant["Status"], "Revoked" )
+        revTS = grant["GrantTime"]
+
+        grant = granted[0]
+        self.assertEqual( grant["WorkerId"], worker2.aws_id)
+        self.assertEqual( grant["QualificationTypeId"], qualId)
+        self.assertEqual( grant["Status"], "Granted" )
+        grantTS = grant["GrantTime"]
+
+        # I'm not controlling the system clock so
+        # I'm doing a differential time comparison here.
+        self.assertTrue( grantTS > revTS )
