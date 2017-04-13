@@ -29,7 +29,7 @@ workerPatterns = [
     url('^settings/$', WorkerSettingsPage.as_view(), name="worker-settings"),
 ]
 
-from mturk.requesters import *
+from mturk.requester.views import *
 
 requesterPatterns = [
     url('^home/$', RequesterHomePage.as_view(), name="requester-home"),
@@ -55,8 +55,6 @@ requesterPatterns = [
     url('^tasks/(?P<task_id>[0-9]+)/assign/reject/$', RequesterTaskRejectAll.as_view()),
     url('^tasks/(?P<task_id>[0-9]+)/assign/(?P<assign_id>[0-9]+)/approve/$', RequesterTaskApproveAssignment.as_view()),
     url('^tasks/(?P<task_id>[0-9]+)/assign/(?P<assign_id>[0-9]+)/reject/$', RequesterTaskRejectAssignment.as_view()),
-
-
 
 
     url('^workers/$', RequesterWorkersPage.as_view()),
