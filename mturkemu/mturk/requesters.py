@@ -94,7 +94,8 @@ class RequesterQualRequestApprove(LoginRequiredMixin, MTurkBaseView):
         )
 
         # Remove the qual request
-        req.delete()
+        req.state = QualReqStatusField.APPROVED
+        req.save()
 
         return( redirect("requester-qual-requests") )
 
