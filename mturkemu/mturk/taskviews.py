@@ -184,7 +184,6 @@ class CreateTaskType(object):
 
         # Add the qualification req objects
         for qual in self.quals:
-
             tt.qualifications.add(qual)
 
         # Create new Tags and add to our existing list.
