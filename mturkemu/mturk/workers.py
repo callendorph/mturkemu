@@ -20,6 +20,7 @@ from mturk.models import *
 from mturk.utils import MTurkBaseView
 from mturk.fields import *
 from mturk.questions import QuestionValidator
+from mturk.worker.actor import WorkerActor
 
 import logging
 logger = logging.getLogger("mturk")
@@ -33,32 +34,13 @@ class WorkerHomePage(LoginRequiredMixin, MTurkBaseView):
     def get(self, request):
 
         worker = self.get_worker(request)
+        actor = WorkerActor(worker)
 
         cxt = {
             "active" : "home",
             "worker" : worker,
-            "earnings" : {
-                "tasks" : 0.00,
-                "bonuses" : 0.00,
-                "total" : 0.00,
-            },
-            "tasks" : {
-                "submitted" : {
-                    "count" : 0,
-                },
-                "approved" : {
-                    "count" : 0,
-                    "rate" : "0%",
-                },
-                "rejected" : {
-                    "count" : 0,
-                    "rate" : "0%",
-                },
-                "pending" : {
-                    "count" : 0,
-                }
-            },
         }
+        cxt.update( actor.get_statistics() )
         return( render(request, "worker/home.html", cxt) )
 
 class WorkerQualsPage(LoginRequiredMixin, MTurkBaseView):
@@ -101,156 +83,37 @@ class WorkerQualInfoPage(LoginRequiredMixin, MTurkBaseView):
         }
         return( render(request, "worker/qual_info.html", cxt) )
 
-class QualPermanentDenial(Exception):
-    def __init__(self):
-        super().__init__(
-            "You have already requested this Qualification and been denied. This qualification does not allow multiple attempts to request a qualification."
-        )
-
-class QualTemporaryDenial(Exception):
-    def __init__(self, nextReqTime):
-        super().__init__(
-            "You have already requested this qualification and been denied. You have to wait until %s before you can request again" % nextReqTime
-        )
-
-class QualHasActiveRequest(Exception):
-    def __init__(self):
-        super().__init__(
-            "You already have an active request for this qualification"
-        )
-
-class QualHasActiveGrant(Exception):
-    def __init__(self):
-        super().__init__(
-            "You already have an active grant for this qualification"
-        )
-
-class QualPermamentGrantBlock(Exception):
-    def __init__(self):
-        super().__init__(
-            "Your grant for this qualification has been revoked and this qualification does not allow multiple attempts to request it. Contact the Requester if you think this is in error"
-            )
-
 class WorkerRequestQual(LoginRequiredMixin, MTurkBaseView):
     """
     """
 
-    def handle_requests(self, worker, qual):
-        rejects = qual.qualificationrequest_set.filter(
-            worker = worker,
-            state = QualReqStatusField.REJECTED
-            ).order_by("-last_request")
-        if ( rejects.exists() ):
-            if ( qual.retry_active ):
-                req = rejects[0]
-                nextReqTime = req.last_request + qual.retry_delay
-                timestamp = timezone.now()
-                if ( timestamp > nextReqTime ):
-                    # Worker is allowed to re-request now
-                    req.last_request = timestamp
-                    # @todo - fix state here
-                    # req.rejected = False
-                    req.answer = ""
-                    req.reason = ""
-                    req.save()
-                    return(req)
-                else:
-                    raise QualTemporaryDenial(nextReqTime)
-            else:
-                raise QualPermanentDenial()
-
-        # There are no rejected requests present -
-        # Let's see if there are any active requests present
-        reqs = qual.qualificationrequest_set.filter(
-            Q( worker = worker ) &
-            ~ Q( state = QualReqStatusField.REJECTED )
-        )
-
-        if ( reqs.exists() ):
-            raise QualHasActiveRequest()
-
-        # Ok - we need to make an request for this user.
-        req = QualificationRequest.objects.create(
-            worker = worker,
-            qualification = qual,
-            last_request = timezone.now()
-            )
-
-        return(req)
-
-    def handle_grants(self, worker, qual):
-        activeGrants = qual.qualificationgrant_set.filter(
-            worker = worker,
-            active = True
-            )
-        if ( activeGrants.exists() ):
-            raise QualHasActiveGrant()
-
-        blockedGrants = qual.qualificationgrant_set.filter(
-            worker = worker,
-            active = False
-            )
-
-        if ( blockedGrants.exists() ):
-            if ( not qual.retry_active ):
-                raise QualPermamentGrantBlock()
-            else:
-                # Otherwise, we want to let the handle_requests
-                # part of this view handle validation of existing
-                # requests and timeouts
-                pass
-
     def get(self, request, qual_id):
 
         worker = self.get_worker(request)
+        actor = WorkerActor(worker)
 
         qual_id = int(qual_id)
         qual = get_object_or_404(Qualification, pk = qual_id)
 
         try:
-            if ( not qual.requestable ):
-                raise Exception(
-                    "Qualification %s is not Requestable" %
-                    qual.aws_id
-                )
-            self.handle_grants(worker, qual)
-            req = self.handle_requests(worker, qual)
+            req = actor.create_qual_request(qual)
         except Exception as exc:
             messages.error(request, str(exc))
             return(redirect( "worker-quals" ) )
 
-        # We have create a request for this qualification
-        # now lets figure out how to respond
-        if ( qual.auto_grant ):
-            # This is easy -  we can just grant the qualification
-            # immediately.
-            createParams = {
-                "worker" : worker,
-                "qualification" : qual,
-            }
-            if ( qual.auto_grant_locale is not None ):
-                createParams["locale"] = qual.auto_grant_locale
-            else:
-                createParams["value"] = qual.auto_grant_value
-
-            grant = QualificationGrant.objects.create( **createParams )
-
-            req.state = QualReqStatusField.APPROVED
-            req.save()
-
+        grant = actor.process_qual_request(qual, req)
+        if grant:
             messages.info(
                 request, "Qualification Granted for %s" % qual.aws_id
             )
-        elif ( qual.has_test ):
-            # This qualification has a test that the worker must
-            # complete before the qualification will be granted.
-            return(redirect("worker-qual-test", req_id = req.id))
-        else:
-            req.state = QualReqStatusField.PENDING
-            req.save()
+        elif ( req.state == QualReqStatusField.PENDING ):
             messages.info(
                 request, "Qualification Request has been created. The Requester will respond with a decision."
                 )
+        else:
+            # This qualification has a test that the worker must
+            # complete before the qualification will be granted.
+            return(redirect("worker-qual-test", req_id = req.id))
 
         return(redirect( "worker-quals" ) )
 
@@ -258,12 +121,10 @@ class WorkerRequestQual(LoginRequiredMixin, MTurkBaseView):
 class WorkerQualRequestsPage(LoginRequiredMixin, MTurkBaseView):
     def get(self, request):
         worker = self.get_worker(request)
-
+        actor = WorkerActor(worker)
         offset, count = self.get_list_form(request)
 
-        reqList = QualificationRequest.objects.filter(
-            worker = worker
-        ).order_by("-last_request")
+        reqList = actor.list_qual_requests()
 
         reqsPage = self.create_page(offset, count, reqList)
 
@@ -277,12 +138,10 @@ class WorkerQualRequestsPage(LoginRequiredMixin, MTurkBaseView):
 class WorkerQualGrantsPage(LoginRequiredMixin, MTurkBaseView):
     def get(self, request):
         worker = self.get_worker(request)
-
+        actor = WorkerActor(worker)
         offset, count = self.get_list_form(request)
 
-        grantList = QualificationGrant.objects.filter(
-            worker = worker
-        ).order_by("-granted")
+        grantList = actor.list_qual_grants()
 
         grantPage = self.create_page(offset, count, grantList)
 
@@ -297,46 +156,13 @@ class WorkerQualGrantsPage(LoginRequiredMixin, MTurkBaseView):
 class WorkerTasksPage(LoginRequiredMixin, MTurkBaseView):
     """
     """
-    def get_task_groups(self):
-        """
-        Return a list of assignable, non-expired task objects which
-        have a unique TaskType. Unfortunately, this this is not
-        as trivial as it in theory should be because 'distinct' is
-        not general purpose enough to work on explicit fields in all
-        database types I want to use.
-        """
-        tasktypeList = Task.objects.filter(
-            status = TaskStatusField.ASSIGNABLE,
-            expires__gt = timezone.now()
-            ).values("tasktype").distinct()
 
     def get(self, request):
         worker = self.get_worker(request)
-
+        actor = WorkerActor(worker)
         offset, count = self.get_list_form(request)
 
-        # We want to filter for tasks of a particular tasktype
-        # because then we can allow the worker to process tasks from
-        # that group. So we want tasks in a unique tasktype grouping
-        # Note that this is not easy and requires a couple of database
-        # transactions.
-
-        # First I'm going to filter for active tasks and then
-        # pull out the distinct tasktypes object
-        tasktypeIdList = Task.objects.filter(
-            status = TaskStatusField.ASSIGNABLE,
-            expires__gt = timezone.now()
-            ).order_by(
-                "expires"
-            ).values_list("tasktype", flat=True).distinct()
-
-        taskTypeList = TaskType.objects.filter(
-            pk__in = tasktypeIdList
-            )
-
-        # @todo - this should also filter out tasks that the
-        #    worker has already submitted an assignment for
-        #    currently - we don't handle this well.
+        taskTypeList = actor.list_task_groups()
 
         taskTypePage = self.create_page(offset, count, taskTypeList)
 
@@ -484,53 +310,18 @@ class WorkerTaskAccept(LoginRequiredMixin, MTurkBaseView):
     def get(self, request, task_id):
 
         worker = self.get_worker(request)
+        actor = WorkerActor(worker)
 
         task_id = int(task_id)
         task = get_object_or_404(Task, pk = task_id)
 
-        # Check to make sure that the worker has not already
-        # submitted an assignment
         try:
-            # Get any assignment associated with the worker
-            # regardless of status
-            assignment = task.assignment_set.get(
-                worker = worker,
-                dispose = False
-                )
-            # The worker has already processed some part of this task
-            # so they cannot accept it again.
-            if ( assignment.status == AssignmentStatusField.ACCEPTED ):
-                messages.info(
-                    request, "You have already accepted this task"
-                    )
-            else:
-                messages.warning(
-                    request,
-                    "You have already completed an assignment for this task"
-                    )
-        except:
-            # Check if the worker meets all of the qualifications
-            # necessary to accept this qualification
-            if ( not self.check_quals(task, worker) ):
-                messages.error(
-                    request,
-                    "You do not meet all the qualifications for this task"
-                )
-            elif ( not (task.available_assignment_count > 0) ):
-                messages.error(
-                    request,
-                    "No Available Assignment Slots at this Time"
-                )
-            else:
-                # Create an assignment
-                acceptTime = timezone.now()
-                deadlineTime = acceptTime + task.tasktype.assignment_duration
-                assignment = Assignment.objects.create(
-                    task = task,
-                    worker = worker,
-                    accepted = acceptTime,
-                    deadline = deadlineTime
-                )
+            actor.accept_task(task)
+        except Exception as exc:
+            messages.error(
+                request,
+                "Failed to Accept Task: %s" % str(exc)
+            )
 
         return( redirect("worker-task-info", task_id = task_id))
 
@@ -539,30 +330,21 @@ class WorkerTaskReturn(LoginRequiredMixin, MTurkBaseView):
     def get(self, request, task_id):
 
         worker = self.get_worker(request)
+        actor = WorkerActor(worker)
 
         task_id = int(task_id)
         task = get_object_or_404(Task, pk = task_id)
 
         try:
-            assignment = task.assignment_set.get(
-                worker = worker,
-                status = AssignmentStatusField.ACCEPTED,
-                dispose = False,
-                )
-            assignment.dispose = True
-            assignment.save()
-
-            worker.returned_hits += 1
-            worker.save()
+            actor.return_task(task)
             messages.info(
                 request,
-                "Successfully Returned HIT: %s" % task.aws_id
+                "Successfully Returned Task: %s" % task.aws_id
             )
         except Exception as exc:
-            logger.error("Worker[%s] Return Fails on Task[%s]: %s" % worker.aws_id, task.aws_id, str(exc))
             messages.error(
                 request,
-                "Failed to Return Assignment for Task: %s" % task.aws_id
+                "Failed to Return Assignment for Task: %s" % str(exc)
             )
 
         return( redirect( "worker-tasks") )
@@ -613,21 +395,8 @@ class WorkerExternalSubmit(View):
         except:
             raise SuspiciousOperation("Invalid Assignment ID: %s" % assignmentId)
 
-        if ( assignment.status != AssignmentStatusField.ACCEPTED ):
-            raise SuspiciousOperation("Invalid Assignment State: %s" % assignmentId)
-
-        answer = self.encode_answer(request)
-        assignment.answer = answer
-        assignment.status = AssignmentStatusField.SUBMITTED
-        assignment.submitted = timezone.now()
-
-        if ( assignment.task.tasktype.auto_approve is None ):
-            # We automatically approve the task because there
-            # is not delay - ?
-            # @todo - confirm how the service actually responds
-            pass
-
-        assignment.save()
+        actor = WorkerActor(assignment.worker)
+        actor.complete_assignment(assignment, request.POST)
 
         return( render(request, "worker/extques_response.html", {} ) )
 
@@ -650,11 +419,6 @@ class WorkerTaskSubmit(LoginRequiredMixin, MTurkBaseView):
             "assignment" : None,
         }
 
-        q = QuestionValidator()
-        name, quesRoot = q.extract(task.question)
-        if ( name != "QuestionForm" ):
-            raise SuspiciousOperation("Invalid Task Question for Submittal")
-
         try:
             assignment = task.assignment_set.get(
                 worker = worker,
@@ -667,28 +431,22 @@ class WorkerTaskSubmit(LoginRequiredMixin, MTurkBaseView):
             messages.error(request, "No Accepted Assignment for Task!")
             return( redirect( "worker-task-info", task_id=task_id) )
 
-
-        # The user has provided a schemat that we can validate the
-        # answers against
-        url = reverse("worker-task-submit", kwargs={"task_id" : task_id})
-        form = QuestionForm( url, quesRoot )
-
-        form.process(request.POST)
-        if ( not form.is_valid() ):
+        actor = WorkerActor(worker)
+        try:
+            actor.complete_assignment( assignment, request.POST )
+        except InvalidQuestionFormError as exc:
             messages.error(
                 request,
                 "Invalid Form Submission: Please address the problems below"
                 )
             cxt["assignment"] = assignment
             cxt["quesType"] = "QuestionForm"
-            cxt["form"] = form
+            url = reverse(
+                "worker-task-submit", kwargs={"task_id" : task_id}
+            )
+            cxt["url"] = url
+            cxt["form"] = exc.form
             return( render(request, "worker/task_view.html", cxt ))
-
-        # Handle Question Form Here
-        assignment.answer = form.generate_worker_answer()
-        assignment.status = AssignmentStatusField.SUBMITTED
-        assignment.submitted = timezone.now()
-        assignment.save()
 
         # Get the next task in this task group that the
         # worker can work on

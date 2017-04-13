@@ -147,8 +147,21 @@ class TaskQuestionInvalidError(RequestError):
             "%s.QuestionInvalid" % ERROR_CODE_PREFIX
             )
 
+
+################################
+# Non-RequestError Exceptions
+################################
+
 # XML Processing Errors
 
 class InvalidTagError(Exception):
     def __init__(self, tag):
         super().__init__("Invalid Tag: %s" % tag.localname)
+
+
+class InvalidQuestionFormError(Exception):
+    """
+    """
+    def __init__(self, form):
+        super().__init__("Invalid Question Form Data - Fails Validation")
+        self.form = form
