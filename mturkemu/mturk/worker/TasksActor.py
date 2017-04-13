@@ -10,7 +10,7 @@ from django.utils import timezone
 from mturk.models import *
 from mturk.fields import *
 from mturk.errors import InvalidQuestionFormError
-from mturk.quesformanswer import QFormAnswer
+from mturk.xml.quesformanswer import QFormAnswer
 
 class AssignmentAlreadyAccepted(Exception):
     def __init__(self):

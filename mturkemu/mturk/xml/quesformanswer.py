@@ -6,9 +6,9 @@
 # a QuestionFormAnswer object from XML into a format
 # more easily processed in python.
 
-from mturk.questions import QuestionValidator
+from mturk.xml.questions import QuestionValidator
+from mturk.xml.quesform import QuestionForm
 from mturk.errors import InvalidTagError
-from mturk.quesform import QuestionForm
 
 from lxml import etree
 

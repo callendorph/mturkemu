@@ -1,4 +1,4 @@
-# File: mturk/answerkey.py
+# File: mturk/xml/answerkey.py
 # Author: Carl Allendorph
 # Description:
 #    This file contains the implementation of code to
@@ -6,7 +6,7 @@
 # is more easily usable in python.
 
 
-from mturk.questions import QuestionValidator
+from mturk.xml.questions import QuestionValidator
 from mturk.errors import *
 from lxml import etree
 

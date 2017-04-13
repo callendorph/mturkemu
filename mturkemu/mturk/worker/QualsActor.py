@@ -8,9 +8,9 @@
 #
 
 from mturk.models import *
-from mturk.questions import *
-from mturk.answerkey import AnswerKey
-from mturk.quesformanswer import QFormAnswer
+from mturk.xml.questions import *
+from mturk.xml.answerkey import AnswerKey
+from mturk.xml.quesformanswer import QFormAnswer
 from mturk.errors import InvalidQuestionFormError
 
 class QualPermanentDenial(Exception):

@@ -7,7 +7,7 @@
 # API methods related to HIT and HITType creation.
 
 from mturk.models import *
-from mturk.questions import QuestionValidator
+from mturk.xml.questions import QuestionValidator
 from mturk.errors import *
 
 from datetime import timedelta

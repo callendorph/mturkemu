@@ -20,7 +20,7 @@ from mturk.models import *
 from mturk.utils import MTurkBaseView
 from mturk.fields import *
 
-from mturk.questions import QuestionValidator
+from mturk.xml.questions import QuestionValidator
 from mturk.worker.actor import WorkerActor
 
 import logging

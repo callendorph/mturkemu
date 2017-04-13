@@ -1,4 +1,4 @@
-# File: mturk/quesform.py
+# File: mturk/xml/quesform.py
 # Author: Carl Allendorph
 #
 # Description:

@@ -1,4 +1,4 @@
-# File: mturk/questions.py
+# File: mturk/xml/questions.py
 # Author: Carl Allendorph
 #
 # Description:
@@ -11,7 +11,7 @@
 from django.conf import settings
 
 from mturk.errors import *
-from mturk.quesform import *
+from mturk.xml.quesform import *
 
 from lxml import etree
 

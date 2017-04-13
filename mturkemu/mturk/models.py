@@ -14,8 +14,8 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from mturk.fields import *
-from mturk.questions import *
-from mturk.quesformanswer import QFormAnswer
+from mturk.xml.questions import *
+from mturk.xml.quesformanswer import QFormAnswer
 
 from datetime import timedelta
 import random
