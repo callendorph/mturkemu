@@ -477,6 +477,10 @@ class MTurkHandlers(object):
         else:
             q = Q( qualification__requester=requester )
 
+        # We don't want to include quals that are idle or
+        # that have already been approved/rejected
+        q &= Q( state = QualReqStatusField.PENDING )
+
         reqs = QualificationRequest.objects.filter(q).order_by(
             "-created"
         )[offset:(offset+numResults)]
