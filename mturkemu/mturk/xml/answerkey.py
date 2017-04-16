@@ -190,7 +190,6 @@ class AnswerKey(object):
         for answer in self.answers:
             try:
                 obsVal = form.cleaned_data[answer.ques_id]
-                print("Ques[%s]: Answer: %s" % (answer.ques_id, obsVal))
             except KeyError:
                 raise Exception("Missing Answer for Question: %s" % answer.ques_id)
             hasMatch = False
