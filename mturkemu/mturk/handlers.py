@@ -643,7 +643,7 @@ class MTurkHandlers(object):
         reqId = kwargs["QualificationRequestId"]
 
         req = get_object_or_throw(
-            QualificationRequester,
+            QualificationRequest,
             aws_id = reqId
             )
 
@@ -950,7 +950,7 @@ class MTurkHandlers(object):
 
         grant.save()
 
-        req.state = ReqQualStatusField.APPROVED
+        req.state = QualReqStatusField.APPROVED
         req.save()
 
         return({})
