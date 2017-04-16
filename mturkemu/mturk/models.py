@@ -281,6 +281,20 @@ class QualificationRequest(models.Model):
     def is_approved(self):
         return( self.state == QualReqStatusField.APPROVED )
 
+    def serialize(self):
+        ret = {
+            "QualificationRequestId" : self.aws_id,
+            "QualificationTypeId" : self.qualification.aws_id,
+            "WorkerId" : self.worker.aws_id,
+        }
+        if ( len(self.answer) > 0 ):
+            ret.update({
+                "Test" : self.qualification.test,
+                "Answer" : self.answer,
+                "SubmitTime" : self.last_submitted,
+                })
+        return(ret)
+
     def __str__(self):
         return("<%s...>" % self.aws_id[0:6])
 
