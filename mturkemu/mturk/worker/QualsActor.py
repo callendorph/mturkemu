@@ -13,6 +13,8 @@ from mturk.xml.answerkey import AnswerKey
 from mturk.xml.quesformanswer import QFormAnswer
 from mturk.errors import InvalidQuestionFormError
 
+import traceback
+
 class QualPermanentDenial(Exception):
     def __init__(self):
         super().__init__(
