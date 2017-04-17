@@ -84,11 +84,11 @@ class CreateTaskType(object):
         """
         ret = []
         reqQuals = self.request.get("QualificationRequirements", [])
-        for qual in reqQuals:
-            compStr = qual["Comparator"]
+        for reqQual in reqQuals:
+            compStr = reqQual["Comparator"]
             compId = QualComparatorField.convert_display_to_value(compStr)
 
-            qualId = qual["QualificationTypeId"]
+            qualId = reqQual["QualificationTypeId"]
 
             qual = Qualification.objects.get(aws_id = qualId)
             if ( not qual.active ):
@@ -98,16 +98,16 @@ class CreateTaskType(object):
 
             baseReqParams = {
                 "comparator" : compId,
-                "required_to_preview": qual.get("RequiredToPreview", False),
+                "required_to_preview": reqQual.get("RequiredToPreview", False),
             }
 
-            intList = qual.get("IntegerValues", "")
+            intList = reqQual.get("IntegerValues", "")
             if ( len(intList) > 0 ):
-                intStr = ",".join(intList)
+                intStr = ",".join([str(x) for x in intList])
                 baseReqParams["int_values"] = intStr
 
             try:
-                localeList = qual["LocaleValues"]
+                localeList = reqQual["LocaleValues"]
                 raise NotImplementedError("Locale Query Not Implemented Yet")
                 baseReqParams["locale_values"] = []
             except KeyError:
