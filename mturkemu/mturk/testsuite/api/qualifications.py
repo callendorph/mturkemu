@@ -1339,3 +1339,21 @@ class QualificationTests(RequesterLiveTestCase):
 
         with self.assertRaises(KeyError):
             grant["LocaleValue"]
+
+
+        # Get the qualification score directly
+        resp = self.client.get_qualification_score(
+            QualificationTypeId = qualId,
+            WorkerId = worker1.aws_id
+        )
+
+        self.is_ok(resp)
+
+        obj = resp["Qualification"]
+        self.assertEqual( obj["QualificationTypeId"], qualId )
+        self.assertEqual( obj["WorkerId"], worker1.aws_id )
+        self.assertTrue( obj["GrantTime"] > startTime )
+        self.assertEqual( obj["IntegerValue"], grantVal )
+        self.assertEqual( obj["Status"], "Granted" )
+        with self.assertRaises( KeyError ):
+            grant["LocaleValue"]
