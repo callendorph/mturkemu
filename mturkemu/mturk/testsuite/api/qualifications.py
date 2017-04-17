@@ -7,11 +7,13 @@
 # app.
 
 from django.conf import settings
+from django.utils import timezone
 
 from mturk.models import *
 from mturk.testsuite.utils import RequesterLiveTestCase
 from mturk.worker.actor import WorkerActor
 from mturk.worker.QualsActor import *
+from mturk.xml.quesformanswer import QFormAnswer
 
 import os.path
 
@@ -655,7 +657,10 @@ class QualificationTests(RequesterLiveTestCase):
         grants = resp["Qualifications"]
         self.assertEqual( len(grants), 0 )
 
-    def test_manual_grant_with_exam_and_key(self):
+    def test_manual_grant_with_exam_and_key_01(self):
+        """
+        Test 01 - PercentageMapping
+        """
         worker1_client = self.create_new_client("test2")
         worker1 = Worker.objects.get(user__username = "test2")
 
@@ -781,3 +786,556 @@ class QualificationTests(RequesterLiveTestCase):
         self.assertEqual( grant["WorkerId"], worker1.aws_id)
         self.assertEqual( grant["QualificationTypeId"], qualId)
         self.assertEqual( grant["Status"], "Granted" )
+
+    def test_manual_grant_with_exam_and_key_02(self):
+        """
+        Test 02 - ScaleMapping
+        """
+        worker1_client = self.create_new_client("test2")
+        worker1 = Worker.objects.get(user__username = "test2")
+
+        actor = WorkerActor(worker1)
+
+        test = self.load_test_question(2)
+        answerKey = self.load_answerkey(2)
+
+        # Create a qual that must be manually associated
+        name = "This is the final countdown"
+        desc = "This is the manual qual"
+        resp = self.client.create_qualification_type(
+            Name=name,
+            Description=desc,
+            QualificationTypeStatus = "Active",
+            Test = test,
+            AnswerKey = answerKey,
+            TestDurationInSeconds = 100
+            )
+
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        qualId = obj["QualificationTypeId"]
+
+        # Use the worker to request the qualification
+        qual = Qualification.objects.get( aws_id = qualId )
+        req = actor.create_qual_request(qual)
+        self.assertTrue( req.is_idle() )
+        self.assertEqual( req.worker, worker1 )
+        self.assertEqual( req.qualification, qual )
+
+        grant = actor.process_qual_request(qual, req)
+        self.assertTrue( grant is None )
+
+        req.refresh_from_db()
+        self.assertTrue(req.is_idle() )
+        self.assertFalse( req.is_pending() )
+        self.assertFalse( req.is_rejected() )
+        self.assertFalse( req.is_approved() )
+
+        # Attempt to request again - This won't throw because
+        # we want to transition the worker to looking at the
+        # test.
+        req2 = actor.create_qual_request(qual)
+        self.assertTrue(req2.is_idle() )
+        self.assertFalse( req2.is_pending() )
+        self.assertFalse( req2.is_rejected() )
+        self.assertFalse( req2.is_approved() )
+        self.assertEqual( req.aws_id, req2.aws_id)
+
+        # I don't believe this qual request should show up
+        # here.
+        resp = self.client.list_qualification_requests(
+            QualificationTypeId = qualId,
+            MaxResults = 10
+            )
+
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual(numResults, 0)
+        reqs = resp["QualificationRequests"]
+        self.assertEqual(len(reqs), 0)
+
+        # Now as worker actor - submit a test exam answer that
+        # can be graded
+        answer = {
+            "favorite" : ["green"],
+            "acceptible" : ["red", "blue"],
+        }
+        expScore = 10
+
+        actor.submit_test_answer(req, answer)
+
+        self.assertTrue( req.is_approved() )
+        self.assertFalse( req.is_rejected() )
+        self.assertFalse( req.is_pending() )
+        self.assertFalse( req.is_idle() )
+
+        grant = QualificationGrant.objects.get(
+            worker=worker1,
+            qualification = req.qualification
+        )
+
+        self.assertEqual( grant.value, expScore )
+        self.assertEqual( grant.active, True )
+
+
+        # Check for requests
+        resp = self.client.list_qualification_requests(
+            QualificationTypeId = qualId,
+            MaxResults = 10
+            )
+
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual(numResults, 0)
+        reqs = resp["QualificationRequests"]
+        self.assertEqual(len(reqs), 0)
+
+        #  Check for grants
+        resp = self.client.list_workers_with_qualification_type(
+            QualificationTypeId = qualId,
+            MaxResults = 10
+            )
+
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual( numResults, 1 )
+        grants = resp["Qualifications"]
+        self.assertEqual( len(grants), 1 )
+
+        grant = grants[0]
+        self.assertEqual( grant["WorkerId"], worker1.aws_id)
+        self.assertEqual( grant["QualificationTypeId"], qualId)
+        self.assertEqual( grant["Status"], "Granted" )
+
+    def test_manual_grant_with_exam_and_key_03(self):
+        """
+        Test 03 - RangeMapping
+        """
+        worker1_client = self.create_new_client("test2")
+        worker1 = Worker.objects.get(user__username = "test2")
+
+        actor = WorkerActor(worker1)
+
+        test = self.load_test_question(2)
+        answerKey = self.load_answerkey(3)
+
+        # Create a qual that must be manually associated
+        name = "This is the final countdown"
+        desc = "This is the manual qual"
+        resp = self.client.create_qualification_type(
+            Name=name,
+            Description=desc,
+            QualificationTypeStatus = "Active",
+            Test = test,
+            AnswerKey = answerKey,
+            TestDurationInSeconds = 100
+            )
+
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        qualId = obj["QualificationTypeId"]
+
+        # Use the worker to request the qualification
+        qual = Qualification.objects.get( aws_id = qualId )
+        req = actor.create_qual_request(qual)
+        self.assertTrue( req.is_idle() )
+        self.assertEqual( req.worker, worker1 )
+        self.assertEqual( req.qualification, qual )
+
+        grant = actor.process_qual_request(qual, req)
+        self.assertTrue( grant is None )
+
+        req.refresh_from_db()
+        self.assertTrue(req.is_idle() )
+        self.assertFalse( req.is_pending() )
+        self.assertFalse( req.is_rejected() )
+        self.assertFalse( req.is_approved() )
+
+        # Attempt to request again - This won't throw because
+        # we want to transition the worker to looking at the
+        # test.
+        req2 = actor.create_qual_request(qual)
+        self.assertTrue(req2.is_idle() )
+        self.assertFalse( req2.is_pending() )
+        self.assertFalse( req2.is_rejected() )
+        self.assertFalse( req2.is_approved() )
+        self.assertEqual( req.aws_id, req2.aws_id)
+
+        # I don't believe this qual request should show up
+        # here.
+        resp = self.client.list_qualification_requests(
+            QualificationTypeId = qualId,
+            MaxResults = 10
+            )
+
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual(numResults, 0)
+        reqs = resp["QualificationRequests"]
+        self.assertEqual(len(reqs), 0)
+
+        # Now as worker actor - submit a test exam answer that
+        # can be graded
+        answer = {
+            "favorite" : ["green"],
+            "acceptible" : ["red", "blue"],
+        }
+        expScore = 20
+
+        actor.submit_test_answer(req, answer)
+
+        self.assertTrue( req.is_approved() )
+        self.assertFalse( req.is_rejected() )
+        self.assertFalse( req.is_pending() )
+        self.assertFalse( req.is_idle() )
+
+        grant = QualificationGrant.objects.get(
+            worker=worker1,
+            qualification = req.qualification
+        )
+
+        self.assertEqual( grant.value, expScore )
+        self.assertEqual( grant.active, True )
+
+        # Create another worker to request the qualification
+        # and attempt to get the out of range value
+
+        worker2_client = self.create_new_client("test3")
+        worker2 = Worker.objects.get(user__username = "test3")
+        actor2 = WorkerActor(worker2)
+
+        req = actor2.create_qual_request(qual)
+        self.assertTrue( req.is_idle() )
+        self.assertEqual( req.worker, worker2 )
+        self.assertEqual( req.qualification, qual )
+
+        grant = actor2.process_qual_request(qual, req)
+        self.assertTrue( grant is None )
+
+        req.refresh_from_db()
+        self.assertTrue(req.is_idle() )
+        self.assertFalse( req.is_pending() )
+        self.assertFalse( req.is_rejected() )
+        self.assertFalse( req.is_approved() )
+
+        # Submit a bad answer
+        answer = {
+            "favorite" : ["blue"],
+            "acceptible" : ["red"],
+        }
+        expScore = 1
+
+        actor2.submit_test_answer(req, answer)
+
+        self.assertTrue( req.is_approved() )
+        self.assertFalse( req.is_rejected() )
+        self.assertFalse( req.is_pending() )
+        self.assertFalse( req.is_idle() )
+
+        grant = QualificationGrant.objects.get(
+            worker=worker2,
+            qualification = req.qualification
+        )
+
+        self.assertEqual( grant.value, expScore )
+        self.assertEqual( grant.active, True )
+
+        # Create another worker to request the qualification
+        # and attempt to get the out of range value
+
+        worker3_client = self.create_new_client("test4")
+        worker3 = Worker.objects.get(user__username = "test4")
+        actor3 = WorkerActor(worker3)
+
+        req = actor3.create_qual_request(qual)
+        self.assertTrue( req.is_idle() )
+        self.assertEqual( req.worker, worker3 )
+        self.assertEqual( req.qualification, qual )
+
+        grant = actor3.process_qual_request(qual, req)
+        self.assertTrue( grant is None )
+
+        req.refresh_from_db()
+        self.assertTrue(req.is_idle() )
+        self.assertFalse( req.is_pending() )
+        self.assertFalse( req.is_rejected() )
+        self.assertFalse( req.is_approved() )
+
+        # Submit a bad answer
+        answer = {
+            "favorite" : ["green"],
+            "acceptible" : ["red"],
+        }
+        expScore = 10
+
+        actor3.submit_test_answer(req, answer)
+
+        self.assertTrue( req.is_approved() )
+        self.assertFalse( req.is_rejected() )
+        self.assertFalse( req.is_pending() )
+        self.assertFalse( req.is_idle() )
+
+        grant = QualificationGrant.objects.get(
+            worker=worker3,
+            qualification = req.qualification
+        )
+
+        self.assertEqual( grant.value, expScore )
+        self.assertEqual( grant.active, True )
+
+
+
+
+    def test_manual_grant_with_exam_and_nokey(self):
+        startTime = timezone.now()
+        worker1_client = self.create_new_client("test2")
+        worker1 = Worker.objects.get(user__username = "test2")
+
+        actor = WorkerActor(worker1)
+
+        test = self.load_test_question(2)
+
+        # Create a qual that must be manually associated
+        name = "This is the final countdown"
+        desc = "This is the manual qual"
+        resp = self.client.create_qualification_type(
+            Name=name,
+            Description=desc,
+            QualificationTypeStatus = "Active",
+            Test = test,
+            TestDurationInSeconds = 100
+            )
+
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        qualId = obj["QualificationTypeId"]
+
+        # Use the worker to request the qualification
+        qual = Qualification.objects.get( aws_id = qualId )
+        req = actor.create_qual_request(qual)
+        self.assertTrue( req.is_idle() )
+        self.assertEqual( req.worker, worker1 )
+        self.assertEqual( req.qualification, qual )
+
+        grant = actor.process_qual_request(qual, req)
+        self.assertTrue( grant is None )
+
+        req.refresh_from_db()
+        self.assertTrue(req.is_idle() )
+        self.assertFalse( req.is_pending() )
+        self.assertFalse( req.is_rejected() )
+        self.assertFalse( req.is_approved() )
+
+        # Attempt to request again - This won't throw because
+        # we want to transition the worker to looking at the
+        # test.
+        req2 = actor.create_qual_request(qual)
+        self.assertTrue(req2.is_idle() )
+        self.assertFalse( req2.is_pending() )
+        self.assertFalse( req2.is_rejected() )
+        self.assertFalse( req2.is_approved() )
+        self.assertEqual( req.aws_id, req2.aws_id)
+
+        # I don't believe this qual request should show up
+        # here yet because the worker has not taken the exam yet.
+        resp = self.client.list_qualification_requests(
+            QualificationTypeId = qualId,
+            MaxResults = 10
+            )
+
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual(numResults, 0)
+        reqs = resp["QualificationRequests"]
+        self.assertEqual(len(reqs), 0)
+
+        # Now as worker actor - submit a test exam answer that
+        # can be graded
+        answer = {
+            "favorite" : ["green"],
+            "acceptible" : ["red", "blue"],
+        }
+
+        actor.submit_test_answer(req, answer)
+
+        self.assertTrue( req.is_pending() )
+        self.assertFalse( req.is_rejected() )
+        self.assertFalse( req.is_approved() )
+        self.assertFalse( req.is_idle() )
+
+        with self.assertRaises(QualificationGrant.DoesNotExist):
+            grant = QualificationGrant.objects.get(
+                worker=worker1,
+                qualification = req.qualification
+            )
+
+        # Now as the requester we will poll for outstanding requests.
+        resp = self.client.list_qualification_requests(
+            QualificationTypeId = qualId,
+            MaxResults = 10
+            )
+
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual(numResults, 1)
+        reqs = resp["QualificationRequests"]
+        self.assertEqual(len(reqs), 1)
+
+        obj = reqs[0]
+
+        self.assertEqual( obj["QualificationRequestId"], req.aws_id )
+        self.assertEqual( obj["QualificationTypeId"], qual.aws_id )
+        self.assertEqual( obj["WorkerId"], worker1.aws_id )
+        self.assertEqual( obj["Test"], test )
+        self.assertTrue( obj["SubmitTime"] > startTime )
+        self.assertTrue( len(obj["Answer"]) > 0 )
+
+        wrkAnsXML = QFormAnswer()
+        wrkAnswerSet = wrkAnsXML.parse( obj["Answer"] )
+        self.assertEqual( len(wrkAnswerSet), 2 )
+
+        checkedAns = set()
+        for name, val in answer.items():
+            for wrkAns in wrkAnswerSet:
+                if ( wrkAns["QuestionIdentifier"] == name ):
+                    wrkValStr = wrkAns["SelectionIdentifier"]
+                    wrkVal = wrkValStr.split(" ")
+                    wkrVal = [x for x in wrkVal if len(x) > 0]
+                    self.assertEqual( len(wkrVal), len(val) )
+                    wrkValSet = set(wrkVal)
+                    valSet = set(val)
+                    self.assertEqual( wrkValSet, valSet )
+                    checkedAns.add(name)
+
+        expectedAns = set( answer.keys() )
+        self.assertEqual( checkedAns, expectedAns )
+
+
+        # Accept the grant
+
+        resp = self.client.accept_qualification_request(
+            QualificationRequestId=req.aws_id,
+            IntegerValue=56
+            )
+
+        self.is_ok(resp)
+
+        req.refresh_from_db()
+        self.assertTrue(req.is_approved() )
+        self.assertFalse( req.is_pending() )
+        self.assertFalse( req.is_rejected() )
+        self.assertFalse( req.is_idle() )
+
+
+        #  Check for grants
+        resp = self.client.list_workers_with_qualification_type(
+            QualificationTypeId = qualId,
+            MaxResults = 10
+            )
+
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual( numResults, 1 )
+        grants = resp["Qualifications"]
+        self.assertEqual( len(grants), 1 )
+
+        grant = grants[0]
+        self.assertEqual( grant["WorkerId"], worker1.aws_id)
+        self.assertEqual( grant["QualificationTypeId"], qualId)
+        self.assertEqual( grant["Status"], "Granted" )
+        self.assertTrue( grant["GrantTime"] > startTime )
+        self.assertEqual( grant["IntegerValue"], 56 )
+
+        with self.assertRaises(KeyError):
+            grant["LocaleValue"]
+
+
+    def test_associate_qual_without_request(self):
+        """
+        """
+        startTime = timezone.now()
+        worker1_client = self.create_new_client("test2")
+        worker1 = Worker.objects.get(user__username = "test2")
+
+        actor = WorkerActor(worker1)
+
+        # Create a qual that must be manually associated
+        name = "This is the final countdown"
+        desc = "This is the manual qual"
+        resp = self.client.create_qualification_type(
+            Name=name,
+            Description=desc,
+            QualificationTypeStatus = "Active",
+            )
+
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        qualId = obj["QualificationTypeId"]
+
+        grantVal = 78
+
+        resp = self.client.associate_qualification_with_worker(
+            QualificationTypeId = qualId,
+            WorkerId = worker1.aws_id,
+            IntegerValue = grantVal
+            )
+
+        self.is_ok(resp)
+
+        # List Grants for Workers.
+        resp = self.client.list_workers_with_qualification_type(
+            QualificationTypeId = qualId,
+            MaxResults = 10
+            )
+
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual( numResults, 1 )
+        grants = resp["Qualifications"]
+        self.assertEqual( len(grants), 1 )
+
+        grant = grants[0]
+        self.assertEqual( grant["WorkerId"], worker1.aws_id)
+        self.assertEqual( grant["QualificationTypeId"], qualId)
+        self.assertEqual( grant["Status"], "Granted" )
+        self.assertTrue( grant["GrantTime"] > startTime )
+        self.assertEqual( grant["IntegerValue"], grantVal )
+
+        with self.assertRaises(KeyError):
+            grant["LocaleValue"]

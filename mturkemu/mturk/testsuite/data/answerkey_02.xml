@@ -1,0 +1,27 @@
+<AnswerKey xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2005-10-01/AnswerKey.xsd">
+  <Question>
+    <QuestionIdentifier>favorite</QuestionIdentifier>
+    <AnswerOption>
+      <SelectionIdentifier>blue</SelectionIdentifier>
+      <AnswerScore>5</AnswerScore>
+    </AnswerOption>
+  </Question>
+  <Question>
+    <QuestionIdentifier>acceptible</QuestionIdentifier>
+    <AnswerOption>
+      <SelectionIdentifier>blue</SelectionIdentifier>
+      <SelectionIdentifier>green</SelectionIdentifier>
+      <AnswerScore>10</AnswerScore>
+    </AnswerOption>
+    <AnswerOption>
+      <SelectionIdentifier>blue</SelectionIdentifier>
+      <SelectionIdentifier>red</SelectionIdentifier>
+      <AnswerScore>5</AnswerScore>
+    </AnswerOption>
+  </Question>
+  <QualificationValueMapping>
+    <ScaleMapping>
+      <SummedScoreMultiplier>2</SummedScoreMultiplier>
+    </ScaleMapping>
+  </QualificationValueMapping>
+</AnswerKey>
