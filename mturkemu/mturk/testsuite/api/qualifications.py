@@ -1357,3 +1357,30 @@ class QualificationTests(RequesterLiveTestCase):
         self.assertEqual( obj["Status"], "Granted" )
         with self.assertRaises( KeyError ):
             grant["LocaleValue"]
+
+        # Generate a different requester user and attempt to
+        # Associate the request - this is an illegal operation.
+        requester = self.create_new_client("test3")
+
+        worker2_client = self.create_new_client("test4")
+        worker2 = Worker.objects.get(user__username = "test4")
+
+        actor2 = WorkerActor(worker2)
+
+        RequestError = self.client._load_exceptions().RequestError
+        with self.assertRaises(RequestError):
+            resp = requester.associate_qualification_with_worker(
+                QualificationTypeId = qualId,
+                WorkerId = worker2.aws_id,
+                IntegerValue = grantVal
+            )
+
+        # Attempt dissociate by different requester -
+        # this is an illegal operation.
+
+        with self.assertRaises(RequestError):
+            resp = requester.disassociate_qualification_from_worker(
+                QualificationTypeId = qualId,
+                WorkerId = worker1.aws_id,
+                Reason = "some stupid reason"
+            )
