@@ -692,14 +692,14 @@ class MTurkHandlers(object):
         try:
             grant = QualificationGrant.objects.get(
                 worker = worker,
-                qualification = qualification,
+                qualification = qual,
                 )
             grant.value = value
             grant.active = True
         except QualificationGrant.DoesNotExist:
             grant = QualificationGrant.objects.create(
                 worker = worker,
-                qualification = qualification,
+                qualification = qual,
                 value = value
                 )
 
