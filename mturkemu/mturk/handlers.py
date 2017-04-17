@@ -258,7 +258,7 @@ class MTurkHandlers(object):
 
     def GetQualificationScore(self, **kwargs):
         requester = kwargs["EmuRequester"]
-        qualId = kwargs["QualificationId"]
+        qualId = kwargs["QualificationTypeId"]
         workerId = kwargs["WorkerId"]
 
         qual = get_object_or_throw(Qualification, aws_id = qualId)
