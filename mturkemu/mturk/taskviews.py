@@ -148,7 +148,10 @@ class CreateTaskType(object):
     def find_existing(self):
         """
         Search the database to find a tasktype object that
-        matches teh parameters listed
+        matches the parameters listed.
+        @note - This query is definitely not optimal - there is
+           probably a better way to do this but right now I'm not
+           investing the time to make it better.
         """
 
         if ( len(self.newTags) > 0 ):
@@ -159,13 +162,25 @@ class CreateTaskType(object):
         if ( objs.count() == 0 ):
             raise Exception("No Simple Match for TaskType objects")
 
+        # Check these objects for a match to the existing keyword tags
+        candidates = []
+        existingSet = set([x.value for x in self.existing])
+        for obj in objs:
+            if ( obj.keywords.count() == len( self.existing ) ):
+                valSet = set(obj.keywords.all().values_list("value", flat=True))
+                if ( valSet == existingSet ):
+                    candidates.append( obj )
+
+        if ( len(candidates) == 0 ):
+            raise Exception("No TaskType Object with matching Keywords")
+
         # Finally - we check the qualification requirements
         # We want to find the TaskType from our last query
         # for which all the qualifications match.
 
         expQualSet = set( [x.id for x in self.quals] )
 
-        for obj in objs:
+        for obj in candidates:
             if ( obj.qualifications.count() != len(self.quals) ):
                 continue
 
