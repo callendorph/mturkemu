@@ -63,12 +63,12 @@ class TasksActor(object):
         return(taskTypeList)
 
 
-    def check_prerequisite_quals(self, task):
+    def check_prerequisite_quals(self, tasktype):
         """
         Check if the worker has the necessary qualification grants
         that are required for this task.
         """
-        for qualreq in task.tasktype.qualifications.all():
+        for qualreq in tasktype.qualifications.all():
             try:
                 grant = self.worker.qualificationgrant_set.get(
                     active = True,
@@ -100,7 +100,7 @@ class TasksActor(object):
                 raise TaskAlreadyHasAssignment()
 
         except Assignment.DoesNotExist:
-            if ( not self.check_prerequisite_quals(task) ):
+            if ( not self.check_prerequisite_quals(task.tasktype) ):
                 raise TaskPrereqError()
             elif ( task.status != TaskStatusField.ASSIGNABLE ):
                 raise TaskNotAvailableError()
