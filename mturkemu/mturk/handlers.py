@@ -7,7 +7,7 @@
 #
 #
 
-from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 
 from mturk.models import *

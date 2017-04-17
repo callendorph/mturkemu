@@ -18,6 +18,13 @@ class RequestError(Exception):
 
 ERROR_CODE_PREFIX = "AWS.MechanicalTurk"
 
+class PermissionDenied(RequestError):
+    def __init__(self):
+        super().__init__(
+            "Permission Denied",
+            "%s.PermissionDenied" % ERROR_CODE_PREFIX
+        )
+
 class MissingArgumentError(RequestError):
     def __init__(self, arg):
         super().__init__(
