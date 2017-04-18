@@ -144,7 +144,7 @@ class TasksActor(object):
             contains the values submitted by the worker
         """
 
-        if ( assignment.status != AssignmentStatusField.ACCEPTED ):
+        if ( assignment.status != AssignmentStatusField.ACCEPTED or assignment.dispose):
             raise InvalidAssignmentStateError()
 
         ans = QFormAnswer()

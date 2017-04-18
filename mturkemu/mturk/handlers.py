@@ -101,7 +101,8 @@ class MTurkHandlers(object):
 
         assign = get_object_or_throw(
             Assignment,
-            aws_id = assignId
+            aws_id = assignId,
+            dispose=False
             )
 
         if ( assign.task.requester != requester ):
@@ -147,7 +148,7 @@ class MTurkHandlers(object):
         requester = kwargs["EmuRequester"]
         taskId = kwargs["HITId"]
 
-        task = get_object_or_throw(Task, aws_id = taskId)
+        task = get_object_or_throw(Task, aws_id = taskId, dispose=False)
         if ( task.requester != requester ):
             raise PermissionDenied()
 
@@ -195,7 +196,7 @@ class MTurkHandlers(object):
         taskId = kwargs["HITId"]
         addAssigns = kwargs["NumberOfAdditionalAssignments"]
 
-        task = get_object_or_throw(Task, aws_id = taskId)
+        task = get_object_or_throw(Task, aws_id = taskId, dispose=False)
         if ( task.requester != requester ):
             raise PermissionDenied()
 
@@ -225,7 +226,8 @@ class MTurkHandlers(object):
         workerId = kwargs["WorkerId"]
         worker = get_object_or_throw(
             Worker,
-            aws_id = workerId
+            aws_id = workerId,
+            active=True
             )
 
         try:
@@ -351,7 +353,8 @@ class MTurkHandlers(object):
         task = get_object_or_throw(
             Task,
             requester = requester,
-            aws_id = HITId
+            aws_id = HITId,
+            dispose=False
             )
         # Check the state of the HIT
         if ( not task.is_deletable() ):
@@ -485,7 +488,7 @@ class MTurkHandlers(object):
 
     def GetHIT(self, **kwargs):
         HITId = kwargs["HITId"]
-        task = get_object_or_throw(Task, aws_id = HITId)
+        task = get_object_or_throw(Task, aws_id = HITId, dispose=False)
 
         return({
             "HIT" : task.serialize()
@@ -502,7 +505,8 @@ class MTurkHandlers(object):
 
         worker = get_object_or_throw(
             Worker,
-            aws_id = workerId
+            aws_id = workerId,
+            active=True
             )
 
         try:
@@ -611,7 +615,7 @@ class MTurkHandlers(object):
         taskId = kwargs["HITId"]
         expireAt = kwargs["ExpireAt"]
 
-        task = get_object_or_throw(Task, aws_id = taskId)
+        task = get_object_or_throw(Task, aws_id = taskId, dispose=False)
         if ( task.requester != requester ):
             raise PermissionDenied()
 
@@ -672,7 +676,7 @@ class MTurkHandlers(object):
             aws_id = qualId
             )
 
-        worker = get_object_or_throw(Worker, aws_id = workerId)
+        worker = get_object_or_throw(Worker, aws_id = workerId, active=True)
 
         # First check if a worker qualification grant already exists
         try:
@@ -748,8 +752,8 @@ class MTurkHandlers(object):
         workerId = kwargs["WorkerId"]
         assignId = kwargs["AssignmentId"]
 
-        worker = get_object_or_throw(Worker, aws_id = workerId)
-        assign = get_object_or_throw(Assignment, aws_id = assignId)
+        worker = get_object_or_throw(Worker, aws_id = workerId, active=True)
+        assign = get_object_or_throw(Assignment, aws_id = assignId, dispose=False)
 
         if ( assign.worker != worker or assign.task.requester != requester):
             raise PermissionDenied()
@@ -852,12 +856,14 @@ class MTurkHandlers(object):
 
         if ( HITId is not None ):
             # Check that the HIT is owned by the requester
-            task = get_object_or_throw(Task, aws_id = HITId )
+            task = get_object_or_throw(Task, aws_id = HITId, dispose=False )
             if ( task.requester != requester ):
                 raise PermissionDenied()
             bonusQSet = BonusPayment.objects.filter(assignment__task = task)
         else:
-            assignment = get_object_or_throw(Assignment, aws_id = AssignId)
+            assignment = get_object_or_throw(
+                Assignment, aws_id = AssignId, dispose=False
+            )
             if ( assignment.task.requester != requester ):
                 raise PermissionDenied()
             bonusQSet = BonusPayment.objects.filter(assignment = assignment)
@@ -877,7 +883,7 @@ class MTurkHandlers(object):
         workerId = kwargs["WorkerId"]
         qualId = kwargs["QualificationTypeId"]
 
-        worker = get_object_or_throw(Worker, aws_id = workerId)
+        worker = get_object_or_throw(Worker, aws_id = workerId, active=True)
         qual = get_object_or_throw(Qualification, aws_id = qualId)
 
         if ( qual.requester != requester ):
