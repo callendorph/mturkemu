@@ -615,9 +615,10 @@ class Task(models.Model):
         """
         # @todo - we aren't handling task expiration especially
         #    well here yet.
-        available, pending, completed = self.compute_assignment_stats()
+        available, pending, completed, submitted = self.compute_assignment_stats()
+        #print("State Change: %d/%d/%d/%d" % (available, pending, completed,submitted))
         if ( self.is_assignable() ):
-            if ( completed >= self.max_assignments ):
+            if ( available == 0 and submitted >= self.max_assignments):
                 self.status = TaskStatusField.REVIEWABLE
                 self.save()
             elif ( available == 0 ):
@@ -625,7 +626,7 @@ class Task(models.Model):
                 self.save()
 
         elif ( self.is_unassignable() ):
-            if ( completed >= self.max_assignments ):
+            if ( available == 0 and submitted >= self.max_assignments ):
                 self.status = TaskStatusField.REVIEWABLE
                 self.save()
             elif ( available > 0 ):
@@ -654,6 +655,13 @@ class Task(models.Model):
             dispose = False,
             worker = worker
             ).exists() )
+
+    def pending_assignments(self):
+        q = (
+            Q(dispose=False) &
+            Q(status = AssignmentStatusField.ACCEPTED)
+        )
+        return( self.assignment_set.filter(q))
 
     def submitted_assignments(self):
         """
@@ -707,31 +715,30 @@ class Task(models.Model):
 
     @property
     def pending_assignment_count(self):
-        q = (
-            Q(dispose=False) & (
-                Q(status = AssignmentStatusField.SUBMITTED) |
-                Q(status = AssignmentStatusField.ACCEPTED)
-            )
-        )
-        return( self.assignment_set.filter(q).count())
+        return( self.pending_assignments().count() )
+
+    @property
+    def submitted_assignment_count(self):
+        return( self.submitted_assignments().count())
 
     def compute_assignment_stats(self):
         completed = self.completed_assignment_count
         pending = self.pending_assignment_count
-        available = self.max_assignments - (completed + pending)
+        submitted = self.submitted_assignment_count
+        available = self.max_assignments - (completed + pending + submitted)
         if ( available < 0 ):
             available = 0
 
-        return(available, pending, completed)
+        return(available, pending, completed, submitted)
 
     @property
     def available_assignment_count(self):
-        available,_,_ = self.compute_assignment_stats()
+        available,_,_,_ = self.compute_assignment_stats()
         return(available)
 
     def serialize_assignment_stats(self):
 
-        available, pending, completed = self.compute_assignment_stats()
+        available, pending, completed,_ = self.compute_assignment_stats()
 
         ret = {
             "NumberOfAssignmentsPending" : pending,
@@ -879,16 +886,16 @@ class Assignment(models.Model):
         if ( self.submitted is not None ):
             ret["SubmitTime"] = self.submitted
             ret["Answer"] = self.answer
+            ret["AutoApprovalTime"] = self.auto_approve
 
             if ( self.is_decided() ):
                 ret["RequesterFeedback"] = self.feedback
-                if ( self.is_approved() ):
+                if ( self.approved is not None ):
                     ret["ApprovalTime"] = self.approved
 
-                if ( self.is_rejected() ):
+                if ( self.rejected is not None ):
                     ret["RejectionTime"] = self.rejected
-            else:
-                ret["AutoApprovalTime"] = self.auto_approve
+
 
         return(ret)
 
