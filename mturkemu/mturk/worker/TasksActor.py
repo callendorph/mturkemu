@@ -162,13 +162,8 @@ class TasksActor(object):
         assignment.answer = ansStr
         assignment.status = AssignmentStatusField.SUBMITTED
         assignment.submitted = timezone.now()
-
-        # @todo - check auto approval behavior on mturk.
-
-        if ( assignment.task.tasktype.auto_approve is None ):
-            # We automatically approve the task because there
-            # is not delay - ?
-            # @todo - confirm how the service actually responds
-            pass
+        # Set the auto approve time
+        aaTS = assignment.submitted + assignment.task.tasktype.auto_approve
+        assignment.auto_approve = aaTS
 
         assignment.save()
