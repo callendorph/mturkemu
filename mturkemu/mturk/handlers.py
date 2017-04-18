@@ -758,6 +758,9 @@ class MTurkHandlers(object):
         if ( assign.worker != worker or assign.task.requester != requester):
             raise PermissionDenied()
 
+        if ( assign.is_accepted() ):
+            raise PermissionDenied()
+
         createParams = {
             "worker" : worker,
             "assignment" : assign,
