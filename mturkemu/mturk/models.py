@@ -745,8 +745,8 @@ class Task(models.Model):
         ret = {
             "HITId" : self.aws_id,
             "HITTypeId" : self.tasktype.aws_id,
-            "HITGroupId" : "",
-            "HITLayoutId" : "",
+            #"HITGroupId" : "",
+            #"HITLayoutId" : "",
             "CreationTime" : self.created,
             "Title" : self.tasktype.title,
             "Description" : self.tasktype.description,
