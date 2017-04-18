@@ -350,7 +350,7 @@ class MTurkHandlers(object):
         task = proc.create(taskType = taskType)
 
         return({
-            "HIT": task.serialize()
+            "HIT": task.serialize(includeAnnotation = True)
         })
 
 
