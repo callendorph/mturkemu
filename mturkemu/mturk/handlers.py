@@ -789,7 +789,7 @@ class MTurkHandlers(object):
         if ( requester.balance < amount ):
             raise RequesterInsufficientFundsError()
 
-        createParam["amount"] = amount
+        createParams["amount"] = amount
 
         bp = BonusPayment.objects.create(**createParams)
         bp.save()
