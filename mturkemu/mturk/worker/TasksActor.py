@@ -123,7 +123,7 @@ class TasksActor(object):
         """
 
         assignment = task.assignment_set.get(
-            worker = worker,
+            worker = self.worker,
             status = AssignmentStatusField.ACCEPTED,
             dispose = False,
         )
