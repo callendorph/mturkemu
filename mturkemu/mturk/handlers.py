@@ -319,9 +319,9 @@ class MTurkHandlers(object):
             raise PermissionDenied()
 
         if ( task.is_reviewable() ):
-            task.state = TaskStatusField.REVIEWING
+            task.status = TaskStatusField.REVIEWING
         elif ( task.is_reviewing() and revert ):
-            task.state = TaskStatusField.REVIEWABLE
+            task.status = TaskStatusField.REVIEWABLE
 
         task.save()
 
@@ -615,7 +615,7 @@ class MTurkHandlers(object):
             # Immediately Expire the Task
             # @todo - I need to test this on the sandbox
             #   to confirm this is the right behavior
-            task.state = TaskStatusField.UNASSIGNABLE
+            task.status = TaskStatusField.UNASSIGNABLE
         else:
             task.expires = expireAt
 
