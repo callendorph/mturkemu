@@ -113,6 +113,7 @@ class TasksActor(object):
                     accepted = acceptTime,
                     deadline = deadlineTime
                 )
+                return(assignment)
 
     def return_task(self, task):
         """
