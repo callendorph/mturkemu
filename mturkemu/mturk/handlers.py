@@ -114,18 +114,9 @@ class MTurkHandlers(object):
             raise AssignmentAlreadyRejectedError()
 
         if ( assign.is_approved() ):
-            # @note - check what AWS actually does here
-            raise RequestError("Assignment already Approved", 17)
+            raise AssignmentNotSubmittedError()
 
-        assign.status = AssignmentStatusField.APPROVED
-        assign.approved = timezone.now()
-
-        try:
-            feedback = kwargs["RequesterFeedback"]
-            assign.feedback = feedback
-        except KeyError:
-            pass
-
+        assign.approve( kwargs.get("RequesterFeedback", "") )
         assign.save()
 
         return({})
@@ -560,20 +551,10 @@ class MTurkHandlers(object):
         if ( not assign.is_submitted() ):
             raise AssignmentNotSubmittedError()
 
-        # @todo - need to check if the service throws an error
-        # if the assignment has already been approved.
+        if ( assign.is_approved() ):
+            raise AssignmentAlreadyApprovedError()
 
-        assign.status = AssignmntStatusField.REJECTED
-        assign.rejected = timezone.now()
-        try:
-            feedback = kwargs["RequesterFeedback"]
-            # @todo - I need to filter feedback and throw an error
-            #    Needs to be less than 1024 chars and
-            #    needs to filter ASCII 0-8,11,12, 14-31,
-            assign.feedback = feedback
-        except KeyError:
-            pass
-
+        assign.reject( kwargs.get("RequesterFeedback", "") )
         assign.save()
 
         return({})

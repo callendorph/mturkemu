@@ -124,6 +124,13 @@ class AssignmentNotSubmittedError(RequestError):
             "%s.AssignmentNotSubmitted" % ERROR_CODE_PREFIX
         )
 
+class AssignmentAlreadyApprovedError(RequestError):
+    def __init__(self):
+        super().__init__(
+            "Request Attempts to reject an assignment that has already been approved which is not allowed.",
+            "%s.AssignmentAlreadyApproved" % ERROR_CODE_PREFIX
+        )
+
 class AssignmentAlreadyRejectedError(RequestError):
     def __init__(self):
         super().__init__(
