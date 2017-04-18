@@ -6,36 +6,16 @@
 # evaluating the mturk JSON API interface that is hosted by this
 # app.
 
-from django.conf import settings
 from django.utils import timezone
 
 from mturk.models import *
-from mturk.testsuite.utils import RequesterLiveTestCase
+from mturk.testsuite.utils import RequesterLiveTestCase, load_quesform, load_answerkey
 from mturk.worker.actor import WorkerActor
 from mturk.worker.QualsActor import *
 from mturk.xml.quesformanswer import QFormAnswer
 
-import os.path
 
 class QualificationTests(RequesterLiveTestCase):
-
-    def load_test_question(self, index):
-        fpath = os.path.join(
-            settings.BASE_DIR,
-            "mturk/testsuite/data/quesform_%02d.xml" % index
-        )
-        with open(fpath, "r") as f:
-            test = f.read()
-        return(test)
-
-    def load_answerkey(self, index):
-        fpath = os.path.join(
-            settings.BASE_DIR,
-            "mturk/testsuite/data/answerkey_%02d.xml" % index
-        )
-        with open(fpath, "r") as f:
-            answerKey = f.read()
-        return(answerKey)
 
     def test_duplicate_qual_error(self):
         name = "qwer"
@@ -70,7 +50,7 @@ class QualificationTests(RequesterLiveTestCase):
     def test_invalid_create_args(self):
         # Attempt to create an invalid request with a test and
         # an autogrant flag
-        test = self.load_test_question(1)
+        test = load_quesform(1)
         dur = 10
         name = "fdsa"
         desc = "garbage garbage garbage"
@@ -110,7 +90,7 @@ class QualificationTests(RequesterLiveTestCase):
         name = "asdf"
         desc = "This is a qual"
         dur = 100
-        test = self.load_test_question(1)
+        test = load_quesform(1)
 
         resp = self.client.create_qualification_type(
             Name=name,
@@ -183,8 +163,8 @@ class QualificationTests(RequesterLiveTestCase):
         name = "jdjs"
         desc = "This is a qual with an answerkey"
         dur = 100
-        test = self.load_test_question(2)
-        answerKey = self.load_answerkey(1)
+        test = load_quesform(2)
+        answerKey = load_answerkey(1)
         retry = 1000
 
         resp = self.client.create_qualification_type(
@@ -666,8 +646,8 @@ class QualificationTests(RequesterLiveTestCase):
 
         actor = WorkerActor(worker1)
 
-        test = self.load_test_question(2)
-        answerKey = self.load_answerkey(1)
+        test = load_quesform(2)
+        answerKey = load_answerkey(1)
 
         # Create a qual that must be manually associated
         name = "This is the final countdown"
@@ -796,8 +776,8 @@ class QualificationTests(RequesterLiveTestCase):
 
         actor = WorkerActor(worker1)
 
-        test = self.load_test_question(2)
-        answerKey = self.load_answerkey(2)
+        test = load_quesform(2)
+        answerKey = load_answerkey(2)
 
         # Create a qual that must be manually associated
         name = "This is the final countdown"
@@ -926,8 +906,8 @@ class QualificationTests(RequesterLiveTestCase):
 
         actor = WorkerActor(worker1)
 
-        test = self.load_test_question(2)
-        answerKey = self.load_answerkey(3)
+        test = load_quesform(2)
+        answerKey = load_answerkey(3)
 
         # Create a qual that must be manually associated
         name = "This is the final countdown"
@@ -1111,7 +1091,7 @@ class QualificationTests(RequesterLiveTestCase):
 
         actor = WorkerActor(worker1)
 
-        test = self.load_test_question(2)
+        test = load_quesform(2)
 
         # Create a qual that must be manually associated
         name = "This is the final countdown"

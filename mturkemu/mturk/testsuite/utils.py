@@ -5,11 +5,33 @@
 #    This file contains some utilities for the testsuite unit tests.
 #
 
-from mturk.models import *
+from django.conf import settings
 from django.test import LiveServerTestCase
 from django.contrib.auth.models import User
 
+from mturk.models import *
+
 import boto3
+import os.path
+
+def load_quesform(index):
+    fpath = os.path.join(
+        settings.BASE_DIR,
+        "mturk/testsuite/data/quesform_%02d.xml" % index
+    )
+    with open(fpath, "r") as f:
+        content = f.read()
+    return(content)
+
+def load_answerkey(index):
+    fpath = os.path.join(
+        settings.BASE_DIR,
+        "mturk/testsuite/data/answerkey_%02d.xml" % index
+    )
+    with open(fpath, "r") as f:
+        answerKey = f.read()
+    return(answerKey)
+
 
 class RequesterLiveTestCase(LiveServerTestCase):
     """
