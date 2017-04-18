@@ -832,12 +832,11 @@ class MTurkHandlers(object):
 
 
     def CreateHIT(self, **kwargs):
-
         proc = CreateTask(kwargs)
         task = proc.create()
 
         return({
-            "HIT": task.serialize()
+            "HIT": task.serialize(includeAnnotation=True)
         })
 
     def ListBonusPayments(self, **kwargs):
