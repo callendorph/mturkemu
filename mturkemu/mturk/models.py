@@ -524,7 +524,7 @@ class TaskType(KeywordMixinModel):
                 "RequiredToPreview": qualreq.required_to_preview,
             }
             if ( len(qualreq.int_values) > 0):
-                q["IntegerValues"] = qualreq.int_values
+                q["IntegerValues"] = qualreq.get_int_values()
             elif ( qualreq.locale_values.all().exists() ):
                 locList = []
                 for locale in qualreq.locale_values.all():
