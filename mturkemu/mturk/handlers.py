@@ -542,7 +542,8 @@ class MTurkHandlers(object):
 
         assign = get_object_or_throw(
             Assignment,
-            aws_id = assignId
+            aws_id = assignId,
+            dispose=False
             )
 
         if ( assign.task.requester != requester ):
@@ -791,9 +792,12 @@ class MTurkHandlers(object):
         requester = kwargs["EmuRequester"]
         assignId = kwargs["AssignmentId"]
 
-        assign = get_object_or_throw(Assignment, aws_id = assignId)
+        assign = get_object_or_throw(
+            Assignment,
+            aws_id = assignId, dispose=False
+        )
 
-        if ( assign.requester.id != requester.id ):
+        if ( assign.task.requester.id != requester.id ):
             raise PermissionDenied()
 
         ret = {
