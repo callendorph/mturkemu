@@ -122,7 +122,7 @@ class KeywordMixinModel(models.Model):
 
     def serialize_keywords(self):
         # Convert to a comma separate string of keywords.
-        kws = list(self.keywords.all())
+        kws = [x.value for x in self.keywords.all()]
         return(",".join(kws))
 
 class SystemQualType(object):
