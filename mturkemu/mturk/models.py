@@ -606,6 +606,22 @@ class Task(models.Model):
     def is_reviewing(self):
         return( self.status == TaskStatusField.REVIEWING )
 
+    def is_deletable(self):
+        """
+        Check if this task is in a state where the task
+        can be deleted
+        """
+        # @todo - do I need to check for expired tasks here ?
+        if ( not ( self.is_reviewable() or self.is_reviewing() ) ):
+            return(False)
+
+        # Check if all the assignments for the task have been
+        # reviewed.
+        if ( self.completed_assignment_count < self.max_assignments ):
+            return(False)
+
+        return(True)
+
     def check_state_change(self):
         """
         This method checks the number of assignments for a task

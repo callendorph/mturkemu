@@ -161,6 +161,13 @@ class TaskQuestionInvalidError(RequestError):
             "%s.QuestionInvalid" % ERROR_CODE_PREFIX
             )
 
+class TaskNotDeletableError(RequestError):
+    def __init__(self):
+        super().__init__(
+            "Task is not in a valid state to allow for deletion.",
+            "%s.TaskNotDeletable" % ERROR_CODE_PREFIX
+            )
+
 
 ################################
 # Non-RequestError Exceptions

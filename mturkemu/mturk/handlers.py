@@ -353,6 +353,10 @@ class MTurkHandlers(object):
             requester = requester,
             aws_id = HITId
             )
+        # Check the state of the HIT
+        if ( not task.is_deletable() ):
+            raise TaskNotDeletableError()
+
         task.dispose = True
         task.save()
         return({})
