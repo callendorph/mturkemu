@@ -1364,3 +1364,9 @@ class QualificationTests(RequesterLiveTestCase):
                 WorkerId = worker1.aws_id,
                 Reason = "some stupid reason"
             )
+
+    def test_qualification_update_type(self):
+        """
+        """
+        # @todo - this is not implemented yet
+        pass
