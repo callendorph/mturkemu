@@ -52,6 +52,8 @@ def create_keyword_tags( tags):
 
 
 class CreateTaskType(object):
+    DEFAULT_AUTO_APPROVE = 2592000 # Seconds
+
     def __init__(self, request):
         self.request = request
 
@@ -67,12 +69,11 @@ class CreateTaskType(object):
             "title" : request["Title"],
             "description": request["Description"],
         }
-
-        try:
-            autoApprove = int(request["AutoApprovalDelayInSeconds"])
-            self.params["auto_approve"] = timedelta(seconds=autoApprove)
-        except KeyError:
-            pass
+        autoApprove = int(request.get(
+            "AutoApprovalDelayInSeconds",
+            CreateTaskType.DEFAULT_AUTO_APPROVE
+        ))
+        self.params["auto_approve"] = timedelta(seconds = autoApprove)
 
         self.existing, self.newTags = self._findKeywords()
 
