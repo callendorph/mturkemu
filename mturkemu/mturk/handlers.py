@@ -529,8 +529,9 @@ class MTurkHandlers(object):
             block.save()
 
         except WorkerBlock.DoesNotExist:
-            # @todo - do we need to raise an error if there
-            # was not workerblock to remove?
+            # Per the docs, if there is no worker block then
+            # this command completes successfully with no
+            # effect.
             pass
 
         return({})
