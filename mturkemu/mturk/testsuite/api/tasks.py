@@ -596,6 +596,8 @@ class TaskTests(RequesterLiveTestCase):
         startTime = timezone.now()
         self.create_quals()
         self.create_workers()
+        # Create a separate requester to test access constraints
+        requester = self.create_new_client("req1")
 
         appSecs = 10000
         assignSecs = 100
@@ -670,7 +672,7 @@ class TaskTests(RequesterLiveTestCase):
         with self.assertRaises(AssignmentAlreadyAccepted):
             self.actors[0].accept_task(task)
 
-        # Get the HIT state so that we can see the stats change.
+        # Get the Task state so that we can see the stats change.
         resp = self.client.get_hit(
             HITId = taskId
             )
@@ -690,7 +692,7 @@ class TaskTests(RequesterLiveTestCase):
 
         self.actors[0].complete_assignment(assignment, data)
 
-        # Get the HIT state so that we can see the stats change.
+        # Get the Task state so that we can see the stats change.
         resp = self.client.get_hit(
             HITId = taskId
             )
@@ -705,6 +707,7 @@ class TaskTests(RequesterLiveTestCase):
         with self.assertRaises( TaskAlreadyHasAssignment ):
             self.actors[0].accept_task(task)
 
+        # Now we will have worker 2 take a look at the assignment
         assignment = self.actors[1].accept_task(task)
 
         # Get the HIT state so that we can see the stats change.
@@ -1567,4 +1570,359 @@ class TaskTests(RequesterLiveTestCase):
         Test that an assignment can't be accepted by a worker with
         a block
         """
-        pass
+
+        startTime = timezone.now()
+        self.create_quals()
+        self.create_workers()
+        requester = self.create_new_client("req1")
+
+        maxAssigns = 1
+        lifetime = 10000
+        assignDur = 1000
+        reward = "0.13"
+        title = "Create Task with Quals"
+        desc = "Little bit of sugar"
+        annot = "asdf"
+        question = load_quesform(2)
+
+        resp = self.client.create_hit(
+            MaxAssignments = maxAssigns,
+            LifetimeInSeconds = lifetime,
+            AssignmentDurationInSeconds = assignDur,
+            Reward = reward,
+            Title = title,
+            Description = desc,
+            Question = question,
+            RequesterAnnotation = annot,
+            UniqueRequestToken="ureuw"
+        )
+        self.is_ok(resp)
+
+        taskId = resp["HIT"]["HITId"]
+        task = Task.objects.get(aws_id = taskId)
+
+
+        # We are going to create a block for one of our
+        # workers
+        reason = "Because I don't like you"
+
+        resp = self.client.create_worker_block(
+            WorkerId = self.actors[0].worker.aws_id,
+            Reason = reason
+            )
+        self.is_ok(resp)
+
+        block = WorkerBlock.objects.get(
+            worker = self.actors[0].worker
+            )
+
+        self.assertEqual( block.active, True )
+        self.assertEqual( block.reason, reason )
+        self.assertTrue( block.created > startTime )
+
+        with self.assertRaises(WorkerBlockedError):
+            assignment = self.actors[0].accept_task(task)
+
+        # Delete the worker block
+        reason = "Some mistake"
+        resp = self.client.delete_worker_block(
+            WorkerId = self.actors[0].worker.aws_id,
+            Reason = reason
+            )
+        self.is_ok(resp)
+
+        block = WorkerBlock.objects.get(
+            worker = self.actors[0].worker
+            )
+
+        self.assertEqual( block.active, False )
+        self.assertEqual( block.reason, reason )
+
+        # Worker should now be able to access the
+        # task.
+        assignment = self.actors[0].accept_task(task)
+
+    def test_access_limitations(self):
+        """
+        This test checks that other requesters can't access
+        a requester's HITs and assignments, etc.
+        """
+
+    def test_create_task_with_tasktype(self):
+        """
+        Create Task with a tasktype Object. This test generally does
+        a run through the entire process of creating a task, reviewing
+        its submitted assignments, and completing the task.
+        @note - This test is VERY long. I've decided that it is not worth
+           my time right now to break this up in to lots of smaller
+           tests.
+        """
+        startTime = timezone.now()
+        self.create_quals()
+        self.create_workers()
+        # Create a separate requester to test access constraints
+        requester = self.create_new_client("req1")
+
+        appSecs = 10000
+        assignSecs = 100
+        reward = "0.05"
+        title = "Some Task"
+        desc = "Some long rambling description"
+        kwds = ["asdf", "qwer", "hgfd"]
+        kwdStr = ",".join(kwds)
+        resp = self.client.create_hit_type(
+            AutoApprovalDelayInSeconds = appSecs,
+            AssignmentDurationInSeconds = assignSecs,
+            Reward = reward,
+            Title = title,
+            Keywords = kwdStr,
+            Description = desc,
+            QualificationRequirements = []
+            )
+
+        self.is_ok(resp)
+
+        taskTypeId = resp["HITTypeId"]
+        self.assertTrue( len(taskTypeId) > 0 )
+
+        numAssigns = 2
+        maxLife = 10000
+
+        question = load_quesform(1)
+
+        annot = "Pigs fly at Midnight"
+        resp = self.client.create_hit_with_hit_type(
+            HITTypeId = taskTypeId,
+            MaxAssignments = 2,
+            LifetimeInSeconds = maxLife,
+            Question = question,
+            RequesterAnnotation = annot,
+            UniqueRequestToken = "blarg"
+        )
+
+        self.is_ok(resp)
+
+        obj = resp["HIT"]
+
+        self.assertEqual( obj["HITTypeId"], taskTypeId )
+        taskId = obj["HITId"]
+
+        # Get the Task state so that we can see the stats change.
+        resp = self.client.get_hit( HITId = taskId )
+        self.is_ok(resp)
+
+        # Check that an alternate requester can't get our hit
+        RequestError = self.client._load_exceptions().RequestError
+        with self.assertRaises(RequestError):
+            resp = requester.get_hit( HITId = taskId)
+
+        # Use workers to accept and complete the task.
+        task = Task.objects.get( aws_id = taskId )
+        assignment = self.actors[0].accept_task(task)
+
+        # Submit data for the assignment to put assignment into
+        # pending state.
+        data = {
+            "my_question_id": "Jimmy"
+        }
+
+        self.actors[0].complete_assignment(assignment, data)
+
+        resp = self.client.get_assignment( AssignmentId = assignment.aws_id)
+        self.is_ok(resp)
+
+        # Check that another requester can't access our assignment.
+        with self.assertRaises(RequestError):
+            resp = requester.get_assignment(
+                AssignmentId = assignment.aws_id
+                )
+
+
+        # Now we will have worker 2 take a look at the assignment
+        assignment = self.actors[1].accept_task(task)
+
+        # Submit data for the assignment to put assignment into
+        # pending state.
+        data = {
+            "my_question_id": "Johns"
+        }
+        self.actors[1].complete_assignment(assignment, data)
+
+        # Look for reviewable HITs
+        resp = self.client.list_reviewable_hits(
+            HITTypeId = taskTypeId,
+            MaxResults= 10
+        )
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual( numResults, 1 )
+        tasks = resp["HITs"]
+        self.assertEqual( len(tasks), 1 )
+
+        obj = tasks[0]
+
+        self.assertEqual(obj["HITId"], taskId )
+        self.assertEqual( obj["HITTypeId"], taskTypeId)
+        self.assertEqual( obj["Title"], title )
+        self.assertEqual( obj["Description"], desc )
+
+        # Check that another requester can't view out reviewable hits
+        with self.assertRaises( RequestError ):
+            resp = requester.list_reviewable_hits(
+                HITTypeId = taskTypeId,
+                MaxResults = 10
+            )
+
+        # Check that another requester can't update the reviewable
+        # hits to reviewing state
+
+        with self.assertRaises( RequestError ):
+            resp = requester.update_hit_review_status(HITId = taskId)
+
+        # Transition this task from Reviewable to Reviewing.
+        resp = self.client.update_hit_review_status(HITId = taskId)
+        self.is_ok(resp)
+
+        # Check that another requester can't see "Reviewing" state
+        # HITs
+        with self.assertRaises( RequestError ):
+            resp = requester.list_reviewable_hits(
+                HITTypeId = taskTypeId,
+                Status="Reviewing",
+                MaxResults = 10
+            )
+        # Find Tasks in the Reviewing State - this should
+        # be where we find our task
+        resp = self.client.list_reviewable_hits(
+            HITTypeId = taskTypeId,
+            Status="Reviewing",
+            MaxResults= 10
+        )
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual( numResults, 1 )
+        tasks = resp["HITs"]
+        self.assertEqual( len(tasks), 1 )
+
+        obj = tasks[0]
+
+        self.assertEqual(obj["HITId"], taskId )
+        self.assertEqual( obj["HITTypeId"], taskTypeId)
+        self.assertEqual( obj["Title"], title )
+        self.assertEqual( obj["Description"], desc )
+
+        # Check that another requester can't list assignments
+        # associated with our HIT.
+        with self.assertRaises(RequestError):
+            requester.list_assignments_for_hit(
+                HITId = taskId,
+                AssignmentStatuses=["Approved", "Rejected"]
+            )
+
+        with self.assertRaises(RequestError):
+            requester.list_assignments_for_hit(
+                HITId = taskId,
+                AssignmentStatuses=["Submitted"]
+            )
+
+        # Now let's review the assignments associated
+        # with this task.
+
+        # Check for submitted assigns - there should be 2
+        resp = self.client.list_assignments_for_hit(
+            HITId = taskId,
+            AssignmentStatuses=["Submitted"],
+        )
+        self.is_ok(resp)
+        numResults = resp["NumResults"]
+        self.assertEqual( numResults, 2 )
+        assignments = resp["Assignments"]
+        self.assertEqual( len(assignments), 2 )
+
+
+        # Check that another requester can't approve or reject
+        # our assignments
+        assignId = assignments[0]["AssignmentId"]
+
+        with self.assertRaises(RequestError):
+            requester.approve_assignment(
+                AssignmentId = assignId
+                )
+
+        with self.assertRaises(RequestError):
+            requester.reject_assignment(
+                AssignmentId = assignId,
+                RequesterFeedback = "Blarg"
+                )
+
+        resp = self.client.get_assignment( AssignmentId = assignId )
+        self.is_ok(resp)
+
+        obj = resp["Assignment"]
+        self.assertEqual( obj["AssignmentId"], assignId )
+        self.assertEqual( obj["AssignmentStatus"], "Submitted")
+
+        # Approve first assignment
+
+        resp = self.client.approve_assignment(
+            AssignmentId = assignId
+            )
+        self.is_ok(resp)
+
+        resp = self.client.get_assignment( AssignmentId = assignId )
+        self.is_ok(resp)
+
+        obj = resp["Assignment"]
+        self.assertEqual( obj["AssignmentId"], assignId )
+        self.assertEqual( obj["AssignmentStatus"], "Approved")
+
+        approveTime = obj["ApprovalTime"]
+        subTime = obj["SubmitTime"]
+        self.assertTrue( approveTime > subTime )
+
+        with self.assertRaises(KeyError):
+            rejTime = obj["RejectionTime"]
+
+        # Attempt as the requester to reject this assignment even
+        # though we have already approved it - this should generate
+        # an error.
+        with self.assertRaises(RequestError):
+            resp = self.client.reject_assignment(
+                AssignmentId = assignId,
+                RequesterFeedback = "bs"
+                )
+
+        # Now let's test the rejection of the second assignment.
+        assignId = assignments[1]["AssignmentId"]
+        reason = "Arbitrary Reason"
+        resp = self.client.reject_assignment(
+            AssignmentId = assignId,
+            RequesterFeedback = "Arbitrary Reason"
+            )
+        self.is_ok(resp)
+
+        resp = self.client.get_assignment( AssignmentId = assignId )
+        self.is_ok(resp)
+
+        obj = resp["Assignment"]
+        self.assertEqual( obj["AssignmentId"], assignId )
+        self.assertEqual( obj["AssignmentStatus"], "Rejected")
+
+        rejTime = obj["RejectionTime"]
+        subTime = obj["SubmitTime"]
+        self.assertTrue( rejTime > subTime )
+
+        with self.assertRaises(RequestError):
+            resp = requester.approve_assignment(
+                AssignmentId = assignId,
+                OverrideRejection = True
+                )
+
+        resp = self.client.get_assignment( AssignmentId = assignId )
+        self.is_ok(resp)
+
+        obj = resp["Assignment"]
+        self.assertEqual( obj["AssignmentId"], assignId )
+        self.assertEqual( obj["AssignmentStatus"], "Rejected")
