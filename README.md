@@ -72,7 +72,7 @@ $> python
 ...   region_name = "us-east-1",
 ...   endpoint_url = "http://localhost:8000/"
 ... )
->>> m.client.get_account_balance()
+>>> client.get_account_balance()
 /.../urllib3/connectionpool.py:768: InsecureRequestWarning: Unverified HTTPS request is being made. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.org/en/latest/security.html
   InsecureRequestWarning)
 {
@@ -97,8 +97,8 @@ Notes
 1.  The 'NextToken' in the list methods for the mturk API is generally
     not the same as the mturk implementation at all. It is actually just
     being used as an offset into the query results. I'm assuming that
-    noone who is using the API are using the value of the 'NextToken' for
-    anything other than paging.
+    anyone using the API is using the 'NextToken' for paging only and
+    not for any data in the token.
 2.  Currently, the credentials are not being using to authenticate
     requests. They are only used as a weak username.
 3.  Notifications via email to workers are not implemented at this point.
@@ -107,6 +107,7 @@ Notes
     of the UI are functional for the most part.
 5.  A separate API for workers is in the works that would leverage the
     same botocore base with a different service json definition.
+6.  File Uploads are not supported in the QuestionForm objects yet.
 
 
 Contributing
