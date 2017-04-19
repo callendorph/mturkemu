@@ -56,6 +56,17 @@ class Worker(models.Model):
 
     returned_hits = models.IntegerField(default=0)
 
+    def is_blocked(self, requester):
+        """
+        Determine if this worker is blocked by the requester
+        """
+        return(
+            self.workerblock_set.filter(
+                requester = requester,
+                active = True
+            ).exists()
+        )
+
     def __str__(self):
         return("<%s, %s...>" % (self.user.username, self.aws_id[0:5]))
 

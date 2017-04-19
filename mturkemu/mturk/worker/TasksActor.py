@@ -29,6 +29,10 @@ class TaskNotAvailableError(Exception):
     def __init__(self):
         super().__init__("This task is not available to be assigned")
 
+class WorkerBlockedError(Exception):
+    def __init__(self):
+        super().__init__("This task is not available to you because you are blocked by the requester.")
+
 class TasksActor(object):
 
     def __init__(self, worker):
@@ -100,7 +104,9 @@ class TasksActor(object):
                 raise TaskAlreadyHasAssignment()
 
         except Assignment.DoesNotExist:
-            if ( not self.check_prerequisite_quals(task.tasktype) ):
+            if ( self.worker.is_blocked( task.requester ) ):
+                raise WorkerBlockedError()
+            elif ( not self.check_prerequisite_quals(task.tasktype) ):
                 raise TaskPrereqError()
             elif ( task.status != TaskStatusField.ASSIGNABLE ):
                 raise TaskNotAvailableError()
