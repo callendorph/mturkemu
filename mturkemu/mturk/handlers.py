@@ -487,8 +487,14 @@ class MTurkHandlers(object):
         return(resp)
 
     def GetHIT(self, **kwargs):
+        requester = kwargs["EmuRequester"]
         HITId = kwargs["HITId"]
-        task = get_object_or_throw(Task, aws_id = HITId, dispose=False)
+        task = get_object_or_throw(
+            Task,
+            requester = requester,
+            aws_id = HITId,
+            dispose=False
+        )
 
         return({
             "HIT" : task.serialize()
@@ -574,11 +580,17 @@ class MTurkHandlers(object):
         taskTypeId = kwargs.get("HITTypeId", None)
         stat = kwargs.get("Status", "Reviewable")
 
+        taskType = get_object_or_throw(
+            TaskType,
+            aws_id = taskTypeId,
+            requester = requester
+            )
+
         numResults,offset = self.get_list_args(kwargs)
 
         q = Q(requester = requester) & Q(dispose=False)
         if ( taskTypeId is not None ):
-            q &= Q(tasktype__aws_id = taskTypeId)
+            q &= Q(tasktype = taskType)
 
         if ( stat == "Reviewable" ):
             q &= Q(status = TaskStatusField.REVIEWABLE)
@@ -805,11 +817,10 @@ class MTurkHandlers(object):
 
         assign = get_object_or_throw(
             Assignment,
-            aws_id = assignId, dispose=False
+            task__requester = requester,
+            aws_id = assignId,
+            dispose=False
         )
-
-        if ( assign.task.requester.id != requester.id ):
-            raise PermissionDenied()
 
         ret = {
             "Assignment" : assign.serialize(),
