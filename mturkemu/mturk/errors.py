@@ -160,7 +160,7 @@ class TaskInvalidAssignmentIncreaseError(RequestError):
     def __init__(self):
         super().__init__(
             "Request Attempts to increase the number of assignments in a task by an invalid amount.",
-            "%s.TaskInvalidAssignmentIncrease" % ERROR_CODE_PREFIX
+            "%s.InvalidMaximumAssignmentsIncrease" % ERROR_CODE_PREFIX
         )
 
 class TaskQuestionInvalidError(RequestError):
