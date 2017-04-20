@@ -32,6 +32,15 @@ class MissingArgumentError(RequestError):
             "%s.MissingArgument" % ERROR_CODE_PREFIX
         )
 
+class ParameterValidationError(RequestError):
+    def __init__(self, op, argName, val, minVal, maxVal):
+        super().__init__(
+            ("%s: Invalid Parameter '%s' with value %s. "
+             "Valid values range from %s to %s") %
+            (op, argName, str(val), str(minVal), str(maxVal)),
+            "AWS.ParameterOutOfRange"
+        )
+
 class ValidationError(RequestError):
     """
     General Purpose error returned by mturk for checking input args -

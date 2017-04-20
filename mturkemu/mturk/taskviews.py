@@ -239,6 +239,11 @@ class CreateTask(object):
         # make sure it is present before trying to create the
         # object.
         lifeSeconds = int(self.request["LifetimeInSeconds"])
+        if ( lifeSeconds < 30 or lifeSeconds > 31536000 ):
+            raise ParameterValidationError(
+                "CreateHITWithHITType", "LifetimeInSeconds",
+                lifeSeconds, 30, 31536000
+            )
 
         try:
             annot = self.request["RequesterAnnotation"]
