@@ -1647,16 +1647,6 @@ class TaskTests(RequesterLiveTestCase):
         This test checks that other requesters can't access
         a requester's HITs and assignments, etc.
         """
-
-    def test_create_task_with_tasktype(self):
-        """
-        Create Task with a tasktype Object. This test generally does
-        a run through the entire process of creating a task, reviewing
-        its submitted assignments, and completing the task.
-        @note - This test is VERY long. I've decided that it is not worth
-           my time right now to break this up in to lots of smaller
-           tests.
-        """
         startTime = timezone.now()
         self.create_quals()
         self.create_workers()
@@ -1693,7 +1683,7 @@ class TaskTests(RequesterLiveTestCase):
         annot = "Pigs fly at Midnight"
         resp = self.client.create_hit_with_hit_type(
             HITTypeId = taskTypeId,
-            MaxAssignments = 2,
+            MaxAssignments = numAssigns,
             LifetimeInSeconds = maxLife,
             Question = question,
             RequesterAnnotation = annot,
@@ -1926,3 +1916,312 @@ class TaskTests(RequesterLiveTestCase):
         obj = resp["Assignment"]
         self.assertEqual( obj["AssignmentId"], assignId )
         self.assertEqual( obj["AssignmentStatus"], "Rejected")
+
+    def test_adding_assignments(self):
+        """
+        Test method to increase the number of assignments associated
+        with a task.
+        """
+        startTime = timezone.now()
+        self.create_quals()
+        self.create_workers()
+        # Create a separate requester to test access constraints
+        requester = self.create_new_client("req1")
+
+        appSecs = 10000
+        assignSecs = 100
+        reward = "0.05"
+        title = "Some Task"
+        desc = "Some long rambling description"
+        kwds = ["asdf", "qwer", "hgfd"]
+        kwdStr = ",".join(kwds)
+        resp = self.client.create_hit_type(
+            AutoApprovalDelayInSeconds = appSecs,
+            AssignmentDurationInSeconds = assignSecs,
+            Reward = reward,
+            Title = title,
+            Keywords = kwdStr,
+            Description = desc,
+            QualificationRequirements = []
+            )
+
+        self.is_ok(resp)
+
+        taskTypeId = resp["HITTypeId"]
+        self.assertTrue( len(taskTypeId) > 0 )
+
+        numAssigns = 5
+        maxLife = 10000
+
+        question = load_quesform(1)
+
+        annot = "Pigs fly at Midnight"
+        resp = self.client.create_hit_with_hit_type(
+            HITTypeId = taskTypeId,
+            MaxAssignments = numAssigns,
+            LifetimeInSeconds = maxLife,
+            Question = question,
+            RequesterAnnotation = annot,
+            UniqueRequestToken = "blarg"
+        )
+
+        self.is_ok(resp)
+
+        obj = resp["HIT"]
+
+        self.assertEqual( obj["HITTypeId"], taskTypeId )
+        taskId = obj["HITId"]
+
+        # Attempt to add assignments to this task - this
+        # should fail because of the number of assignments
+        # in this HIT.
+
+        RequestError = self.client._load_exceptions().RequestError
+        with self.assertRaises( RequestError ):
+            self.client.create_additional_assignments_for_hit(
+                HITId = taskId,
+                NumberOfAdditionalAssignments = 100,
+                UniqueRequestToken = "asdf"
+            )
+
+        # Create a task with more assignments
+        numAssigns = 9
+        maxLife = 10000
+
+        question = load_quesform(1)
+
+        annot = "Pigs fly at Midnight"
+        resp = self.client.create_hit_with_hit_type(
+            HITTypeId = taskTypeId,
+            MaxAssignments = numAssigns,
+            LifetimeInSeconds = maxLife,
+            Question = question,
+            RequesterAnnotation = annot,
+            UniqueRequestToken = "blarg2"
+        )
+
+        self.is_ok(resp)
+
+        obj = resp["HIT"]
+
+        self.assertEqual( obj["HITTypeId"], taskTypeId )
+        taskId = obj["HITId"]
+
+        # This should still fail
+        with self.assertRaises( RequestError ):
+            self.client.create_additional_assignments_for_hit(
+                HITId = taskId,
+                NumberOfAdditionalAssignments = 100,
+            )
+
+        numAssigns = 10
+        maxLife = 10000
+
+        question = load_quesform(1)
+
+        annot = "Pigs fly at Midnight"
+        resp = self.client.create_hit_with_hit_type(
+            HITTypeId = taskTypeId,
+            MaxAssignments = numAssigns,
+            LifetimeInSeconds = maxLife,
+            Question = question,
+            RequesterAnnotation = annot,
+            UniqueRequestToken = "blarg3"
+        )
+
+        self.is_ok(resp)
+
+        obj = resp["HIT"]
+
+        self.assertEqual( obj["HITTypeId"], taskTypeId )
+        taskId = obj["HITId"]
+
+        addAssigns = 100
+        resp = self.client.create_additional_assignments_for_hit(
+            HITId = taskId,
+            NumberOfAdditionalAssignments = addAssigns,
+            UniqueRequestToken = "qwer"
+        )
+
+        self.is_ok(resp)
+
+        resp = self.client.get_hit(HITId = taskId)
+        self.is_ok(resp)
+
+        obj = resp["HIT"]
+        self.assertEqual( obj["HITTypeId"], taskTypeId )
+        self.assertEqual( obj["MaxAssignments"], numAssigns + addAssigns)
+
+        # Confirm that another requester can't increase assignment
+        # counts
+        requester = self.create_new_client("req1")
+
+        with self.assertRaises(RequestError):
+            resp = requester.create_additional_assignments_for_hit(
+                HITId = taskId,
+                NumberOfAdditionalAssignments = addAssigns,
+                UniqueRequestToken = "rew"
+            )
+
+        resp = self.client.get_hit(HITId = taskId)
+        self.is_ok(resp)
+
+        obj = resp["HIT"]
+        self.assertEqual( obj["HITTypeId"], taskTypeId )
+        self.assertEqual( obj["MaxAssignments"], numAssigns + addAssigns)
+
+
+    def test_update_expiration(self):
+        """
+        Test updating the expiration time for a task.
+        """
+        startTime = timezone.now()
+        self.create_quals()
+        self.create_workers()
+        # Create a separate requester to test access constraints
+        requester = self.create_new_client("req1")
+        RequestError = self.client._load_exceptions().RequestError
+
+        appSecs = 10000
+        assignSecs = 100
+        reward = "0.05"
+        title = "Some Task"
+        desc = "Some long rambling description"
+        kwds = ["asdf", "qwer", "hgfd"]
+        kwdStr = ",".join(kwds)
+        resp = self.client.create_hit_type(
+            AutoApprovalDelayInSeconds = appSecs,
+            AssignmentDurationInSeconds = assignSecs,
+            Reward = reward,
+            Title = title,
+            Keywords = kwdStr,
+            Description = desc,
+            QualificationRequirements = []
+            )
+
+        self.is_ok(resp)
+
+        taskTypeId = resp["HITTypeId"]
+        self.assertTrue( len(taskTypeId) > 0 )
+
+        numAssigns = 5
+        maxLife = 10000
+
+        question = load_quesform(1)
+
+        annot = "Pigs fly at Midnight"
+        resp = self.client.create_hit_with_hit_type(
+            HITTypeId = taskTypeId,
+            MaxAssignments = numAssigns,
+            LifetimeInSeconds = maxLife,
+            Question = question,
+            RequesterAnnotation = annot,
+            UniqueRequestToken = "blarg"
+        )
+
+        self.is_ok(resp)
+
+        obj = resp["HIT"]
+
+        self.assertEqual( obj["HITTypeId"], taskTypeId )
+        taskId = obj["HITId"]
+
+        creationTime = obj["CreationTime"]
+        self.assertTrue( creationTime > startTime)
+        currExpireTime = obj["Expiration"]
+        self.assertTrue(currExpireTime > startTime)
+
+        td = currExpireTime - creationTime
+        self.assertEqual( td.total_seconds(), maxLife )
+
+        task = Task.objects.get(aws_id = taskId)
+        self.assertFalse( task.is_expired() )
+
+        # Attempt to update the expiration time to a time that
+        # is before the current expiration time but not in the past
+        # this should be a fault.
+
+        newLifeTime = 500
+        newExpireTime = creationTime + timedelta(seconds = newLifeTime)
+        with self.assertRaises( RequestError ):
+            resp = self.client.update_expiration_for_hit(
+                HITId = taskId,
+                ExpireAt = newExpireTime
+            )
+
+        newLifeTime = 10030
+        newExpireTime = creationTime + timedelta(seconds = newLifeTime)
+        with self.assertRaises( RequestError ):
+            resp = self.client.update_expiration_for_hit(
+                HITId = taskId,
+                ExpireAt = newExpireTime
+            )
+
+        # Now push it to a time in the future
+        newLifeTime = 15000
+
+        newExpireTime = creationTime + timedelta(seconds = newLifeTime)
+        resp = self.client.update_expiration_for_hit(
+            HITId = taskId,
+            ExpireAt = newExpireTime
+            )
+
+        self.is_ok(resp)
+
+        resp = self.client.get_hit(HITId = taskId)
+        self.is_ok(resp)
+
+        obj = resp["HIT"]
+
+        creationTime = obj["CreationTime"]
+        self.assertTrue( creationTime > startTime)
+        currExpireTime = obj["Expiration"]
+        self.assertTrue(currExpireTime > startTime)
+
+        td = currExpireTime - creationTime
+        diff = abs(td.total_seconds() -  newLifeTime)
+        self.assertTrue( diff < 1.0)
+
+        task.refresh_from_db()
+        self.assertFalse( task.is_expired() )
+
+
+        # Check that another requester can't change the expiration
+        # time.
+        with self.assertRaises(RequestError):
+            newExpireTime = creationTime + timedelta(seconds = 20000)
+            requester.update_expiration_for_hit(
+                HITId = taskId,
+                ExpireAt = newExpireTime
+                )
+
+        # Now force expire the task.
+
+        newExpireTime = timezone.now() - timedelta(seconds=100)
+        resp = self.client.update_expiration_for_hit(
+            HITId = taskId,
+            ExpireAt = newExpireTime
+            )
+
+        self.is_ok(resp)
+
+        resp = self.client.get_hit(HITId = taskId)
+        self.is_ok(resp)
+
+        obj = resp["HIT"]
+
+        creationTime = obj["CreationTime"]
+        self.assertTrue( creationTime > startTime)
+        currExpireTime = obj["Expiration"]
+        self.assertTrue(currExpireTime < startTime)
+
+        task.refresh_from_db()
+        self.assertTrue( task.is_expired() )
+
+        self.assertTrue( task.is_reviewable() )
+
+        # Attempt to accept an assignment from this task
+        # even though it is expired
+
+        with self.assertRaises(Exception):
+            self.actors[0].accept_task(task)
