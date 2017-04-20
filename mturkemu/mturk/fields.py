@@ -103,6 +103,33 @@ class TaskReviewStatusField(models.CharField, RemoveKeysMixin):
             default = TaskReviewStatusField.NOT_REVIEWED
             )
 
+class QualStatusField(models.CharField, RemoveKeysMixin):
+    """
+    Qualification State - This indicates the state of a
+    qualification. This is primarily interesting for the
+    "Disposing" state where the qualification isn't deleted
+    until the all tasks utilizing this qual are deleted.
+    """
+
+    ACTIVE = "A"
+    INACTIVE = "I"
+    DISPOSING = "D"
+
+    STATES = (
+        (ACTIVE, "Active"),
+        (INACTIVE, "Inactive"),
+        (DISPOSING, "Disposing"),
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.removeKeys(kwargs)
+        super().__init__(
+            max_length = 1,
+            choices = QualStatusField.STATES,
+            default = QualStatusField.ACTIVE
+            )
+
+
 class QualReqStatusField(models.CharField, RemoveKeysMixin):
     """
     Qualification Request Status - This indicates the state of

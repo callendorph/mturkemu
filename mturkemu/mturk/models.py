@@ -190,7 +190,10 @@ class Qualification(KeywordMixinModel):
     name = models.CharField(max_length=MAX_NAME_LEN)
     description=models.TextField()
 
-    active = models.BooleanField(default=True)
+    # Status of the Qualification - the "Disposing" state is
+    # of particular importance but 'Inactive' is also used to
+    # disallow workers from requesting
+    status = QualStatusField()
 
     auto_grant = models.BooleanField(default=False)
     auto_grant_value = models.IntegerField(default=1)
@@ -213,6 +216,47 @@ class Qualification(KeywordMixinModel):
     # rely on this qualification.
     dispose = models.BooleanField(default=False)
 
+    def is_active(self):
+        return( self.status == QualStatusField.ACTIVE )
+    def is_inactive(self):
+        return( self.status == QualStatusField.INACTIVE )
+    def is_disposing(self):
+        return( self.status == QualStatusField.DISPOSING )
+
+    def is_ref_in_active_tasks(self):
+        """
+        Determine is this qualification is referenced from
+        Active Tasks.
+        """
+        taskTypes = TaskType.objects.filter(
+            qualifications__qualification = self
+            )
+
+        if ( taskTypes.exists() ):
+            activeTasks = Task.objects.filter(
+                tasktype__pk__in = taskTypes.values_list("pk", flat=True),
+                dispose=False
+            )
+            return( activeTasks.exists(), taskTypes )
+
+        return(False, taskTypes)
+
+    def purge_grants(self):
+        """
+        This qualification is being disposed of - so we need to remove
+        any active grants
+        """
+
+        grants = QualificationGrant.objects.filter(
+            qualification = self,
+            dispose=False
+            )
+        for grant in grants:
+            grant.dispose = True
+            grant.save()
+
+
+
     @property
     def has_test(self):
         return( len(self.test) > 0 )
@@ -232,7 +276,7 @@ class Qualification(KeywordMixinModel):
             "Name" : self.name,
             "Description" : self.description,
             "Keywords" : self.serialize_keywords(),
-            "QualificationTypeStatus" : "Active" if self.active else "Inactive",
+            "QualificationTypeStatus" : self.get_status_display(),
             "IsRequestable" : self.requestable,
             "AutoGranted" : self.auto_grant,
         }

@@ -385,7 +385,10 @@ class MTurkHandlers(object):
         }
 
         status = kwargs["QualificationTypeStatus"]
-        createParams["active"] = (status == "Active")
+        if ( status == "Active" ):
+            createParams["status"] = QualStatusField.ACTIVE
+        else:
+            createParams["status"] = QualStatusField.INACTIVE
 
         try:
             retry_delay = int(kwargs["RetryDelayInSeconds"])
@@ -743,7 +746,11 @@ class MTurkHandlers(object):
 
         try:
             stat = kwargs["QualificationTypeStatus"]
-            qual.active = ( stat == "Active" )
+            if ( stat == "Active" ):
+                qual.status = QualStatusField.ACTIVE
+            else:
+                qual.status = QualStatusField.INACTIVE
+
         except KeyError:
             pass
 
@@ -846,15 +853,18 @@ class MTurkHandlers(object):
         requester = kwargs["EmuRequester"]
         qualId = kwargs["QualificationTypeId"]
 
-        q = get_object_or_throw(
+        qual = get_object_or_throw(
             Qualification,
             requester = requester,
-            aws_id = qualId
+            aws_id = qualId,
+            dispose=False
             )
 
-        q.active = False
-        q.dispose = True
-        q.save()
+        # Move to the disposing state - do not dispose yet
+        # we need to check if there are outstanding tasks.
+        qual.status = QualStatusField.DISPOSING
+        qual.save()
+
 
         return({})
 
