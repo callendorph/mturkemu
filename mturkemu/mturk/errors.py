@@ -69,7 +69,7 @@ class DoesNotExistError(RequestError):
     """
     def __init__(self, model, pk=""):
         super().__init__(
-            "%s %s does not exist.",
+            "%s %s does not exist." % ( model, pk ),
             "%s.DoesNotExist" % ERROR_CODE_PREFIX
         )
 
