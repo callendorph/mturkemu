@@ -201,7 +201,7 @@ class MTurkHandlers(object):
             raise PermissionDenied()
 
         newAssignsCount = task.max_assignments + addAssigns
-        if ( task.max_assignments < 10 and newAssignCount >= 10 ):
+        if ( task.max_assignments < 10 and newAssignsCount >= 10 ):
             raise TaskInvalidAssignmentIncreaseError()
 
         task.max_assignments = newAssignsCount
