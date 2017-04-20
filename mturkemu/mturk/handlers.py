@@ -16,7 +16,7 @@ from mturk.errors import *
 from mturk.xml.questions import QuestionValidator
 from mturk.fields import *
 
-from datetime import timedelta
+from datetime import timedelta, datetime
 import re
 
 def get_object_or_throw(model, **kwargs):
@@ -628,18 +628,31 @@ class MTurkHandlers(object):
         taskId = kwargs["HITId"]
         expireAt = kwargs["ExpireAt"]
 
-        task = get_object_or_throw(Task, aws_id = taskId, dispose=False)
-        if ( task.requester != requester ):
-            raise PermissionDenied()
+        expireTime = datetime.fromtimestamp(expireAt, timezone.utc)
+
+        task = get_object_or_throw(
+            Task,
+            aws_id = taskId,
+            requester = requester,
+            dispose=False
+        )
 
         currTime = timezone.now()
-        if ( expireAt < currTime ):
+        if ( expireTime < currTime ):
             # Immediately Expire the Task
-            # @todo - I need to test this on the sandbox
-            #   to confirm this is the right behavior
-            task.status = TaskStatusField.UNASSIGNABLE
+            task.status = TaskStatusField.REVIEWABLE
         else:
-            task.expires = expireAt
+            # Determine the increment and check for a valid
+            # range.
+            # @note - You can't change the expiration to be sooner
+            #   than the current expiration time and it must be at least
+            #   60 seconds later.
+            diff = expireTime - task.expires
+            totalSecs = diff.total_seconds()
+            if ( totalSecs < 60 or totalSecs > 31536000 ):
+                raise InvalidExpirationIncrementError( int(totalSecs) )
+
+        task.expires = expireTime
 
         task.save()
         return({})

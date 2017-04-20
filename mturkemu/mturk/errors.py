@@ -177,6 +177,12 @@ class TaskNotDeletableError(RequestError):
             "%s.TaskNotDeletable" % ERROR_CODE_PREFIX
             )
 
+class InvalidExpirationIncrementError(RequestError):
+    def __init__(self, inc):
+        super().__init__(
+            "Invalid Expiration Increment %d - must be 60 to 31536000" % inc,
+            "%s.InvalidExpirationIncrement" % ERROR_CODE_PREFIX
+        )
 
 ################################
 # Non-RequestError Exceptions
