@@ -8,9 +8,23 @@
 from django.views import View
 from django.shortcuts import get_object_or_404
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.core.exceptions import ObjectDoesNotExist
 
 from mturk.models import *
 from mturk.forms import *
+from mturk.errors import *
+
+def get_object_or_throw(model, **kwargs):
+    """
+    Similar to the 'get_object_or_404' but for throwing a
+    RequestError
+    """
+    try:
+        obj = model.objects.get(**kwargs)
+        return(obj)
+    except ObjectDoesNotExist:
+        raise DoesNotExistError(model)
+
 
 class MTurkBaseView(View):
     """

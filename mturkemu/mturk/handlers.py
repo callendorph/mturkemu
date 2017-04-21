@@ -7,7 +7,6 @@
 #
 #
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 
 from mturk.models import *
@@ -15,20 +14,10 @@ from mturk.taskviews import CreateTaskType, CreateTask
 from mturk.errors import *
 from mturk.xml.questions import QuestionValidator
 from mturk.fields import *
+from mturk.utils import get_object_or_throw
 
 from datetime import timedelta, datetime
 import re
-
-def get_object_or_throw(model, **kwargs):
-    """
-    Similar to the 'get_object_or_404' but for throwing a
-    RequestError
-    """
-    try:
-        obj = model.objects.get(**kwargs)
-        return(obj)
-    except ObjectDoesNotExist:
-        raise DoesNotExistError(model)
 
 class MTurkHandlers(object):
 
