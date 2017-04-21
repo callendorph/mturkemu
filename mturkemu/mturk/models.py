@@ -857,6 +857,32 @@ class Task(models.Model):
     def __str__(self):
         return("<%s...>" % self.aws_id[0:6])
 
+@receiver(post_save, sender=Task, dispatch_uid="mturk_task_save")
+def task_handle_post_delete(sender, instance, **kwargs):
+    """
+    When a task is disposed of, ie deleted, then we want to check
+    to see if there are other items we can clean up as well.
+    1) Qualifications in the Disposing State
+    """
+    task = instance
+
+    if ( not task.dispose ):
+        return
+
+    # This task is being disposed - we will check to
+    # see if there are any of the qualifications in its tasktypes
+    # that need to be cleaned up
+    for qualreq in task.tasktype.qualifications.all():
+        qual = qualreq.qualification
+        if ( qual.is_disposing() ):
+            inActiveTasks, _ = qual.is_ref_in_active_tasks()
+            if ( not inActiveTasks ):
+                qual.purge_grants()
+                # Now we can delete
+                qual.dispose = True
+                qual.save()
+
+
 class Assignment(models.Model):
     """
     Assignments are completed instances of a task by a particular worker

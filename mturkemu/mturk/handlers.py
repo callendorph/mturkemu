@@ -735,6 +735,39 @@ class MTurkHandlers(object):
         qual.status = QualStatusField.DISPOSING
         qual.save()
 
+        # Reject any pending qual requests for this qualification.
+        query = Q(qualification=qual)
+        query &=(
+            Q( state = QualReqStatusField.IDLE) |
+            Q( state = QualReqStatusField.PENDING )
+        )
+        qualreqs = QualificationRequest.objects.filter( query )
+        for qualreq in qualreqs:
+            qualreq.state = QualReqStatusField.REJECTED
+            qualreq.reason = "Qualification was deleted"
+            qualreq.save()
+
+        # Find an TaskType objects that are dependendent on this
+        #    qual
+        inActiveTasks, taskTypes = qual.is_ref_in_active_tasks()
+
+        # Dispose of the task Type - we don't delete it because
+        #    there may be active Tasks that are still leveraging
+        #    this task type that we want to complete.
+        for taskType in taskTypes:
+            taskType.dispose = True
+            taskType.save()
+
+        if ( not inActiveTasks ):
+            qual.purge_grants()
+            # Now we can delete
+            qual.dispose = True
+            qual.save()
+        else:
+            # We allow the "post_save" on the task to handle
+            # cleanup of the qualifications.
+            pass
+
 
         return({})
 
