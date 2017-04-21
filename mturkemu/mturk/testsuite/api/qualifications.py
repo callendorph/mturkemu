@@ -1371,8 +1371,698 @@ class QualificationTests(RequesterLiveTestCase):
                 Reason = "some stupid reason"
             )
 
-    def test_qualification_update_type(self):
+    def test_qualification_update_status(self):
         """
         """
-        # @todo - this is not implemented yet
-        pass
+        name = "zxcv"
+        desc = "This is the other qual"
+        resp = self.client.create_qualification_type(
+            Name=name,
+            Description=desc,
+            QualificationTypeStatus = "Inactive",
+            )
+
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Inactive")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        qualId = obj["QualificationTypeId"]
+
+        resp = self.client.update_qualification_type(
+            QualificationTypeId = qualId,
+            QualificationTypeStatus = "Active"
+            )
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        # Confirm that another requester can change the status
+        requester = self.create_new_client("req1")
+        RequestError = self.client._load_exceptions().RequestError
+        with self.assertRaises(RequestError):
+            resp = requester.update_qualification_type(
+                QualificationTypeId = qualId,
+                QualificationTypeStatus = "Inactive"
+            )
+
+        resp = self.client.get_qualification_type(
+            QualificationTypeId = qualId
+            )
+        self.is_ok(resp)
+
+        obj=resp["QualificationType"]
+        self.assertEqual( obj["QualificationTypeStatus"], "Active" )
+
+    def test_qualification_update_retry(self):
+        """
+        """
+        name = "zxcv"
+        desc = "This is the other qual"
+        resp = self.client.create_qualification_type(
+            Name=name,
+            Description=desc,
+            QualificationTypeStatus = "Active",
+            )
+
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        with self.assertRaises(KeyError):
+            obj["RetryDelayInSeconds"]
+
+        qualId = obj["QualificationTypeId"]
+
+        # Update to add a retry Delay
+        retryDelay = 1000
+        resp = self.client.update_qualification_type(
+            QualificationTypeId = qualId,
+            RetryDelayInSeconds = retryDelay,
+            )
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+        self.assertEqual(obj["RetryDelayInSeconds"], retryDelay)
+
+        # Check other requester can't update
+        requester = self.create_new_client("req1")
+        RequestError = self.client._load_exceptions().RequestError
+        with self.assertRaises(RequestError):
+            resp = requester.update_qualification_type(
+                QualificationTypeId = qualId,
+                RetryDelayInSeconds = 1500,
+            )
+
+        resp = self.client.get_qualification_type(
+            QualificationTypeId = qualId
+            )
+        self.is_ok(resp)
+
+        obj=resp["QualificationType"]
+        self.assertEqual( obj["RetryDelayInSeconds"], retryDelay )
+
+        # Update the retry delay again from the already
+        # configured state.
+
+        retryDelay = 2000
+        resp = self.client.update_qualification_type(
+            QualificationTypeId = qualId,
+            RetryDelayInSeconds = retryDelay,
+            )
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+        self.assertEqual(obj["RetryDelayInSeconds"], retryDelay)
+
+    def test_qualification_update_test_answer(self):
+        """
+        """
+        name = "zxcv"
+        desc = "This is the other qual"
+        resp = self.client.create_qualification_type(
+            Name=name,
+            Description=desc,
+            QualificationTypeStatus = "Active",
+            )
+
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        with self.assertRaises(KeyError):
+            obj["Test"]
+        with self.assertRaises(KeyError):
+            obj["TestDurationInSeconds"]
+        with self.assertRaises(KeyError):
+            obj["AnswerKey"]
+
+        qualId = obj["QualificationTypeId"]
+
+        dur = 100
+        test = load_quesform(2)
+        answerKey = load_answerkey(1)
+
+        # First test update without answer key
+
+        resp = self.client.update_qualification_type(
+            QualificationTypeId = qualId,
+            Test = test,
+            TestDurationInSeconds = dur
+            )
+        self.is_ok(resp)
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        self.assertEqual(obj["Test"], test)
+        self.assertEqual(obj["TestDurationInSeconds"], dur)
+        with self.assertRaises(KeyError):
+            obj["AnswerKey"]
+
+        # Now attempt to add only the answer key - this should fail
+        RequestError = self.client._load_exceptions().RequestError
+        with self.assertRaises(RequestError):
+            resp = self.client.update_qualification_type(
+                QualificationTypeId = qualId,
+                AnswerKey = answerKey
+                )
+
+        resp = self.client.get_qualification_type(
+            QualificationTypeId = qualId
+        )
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        self.assertEqual(obj["Test"], test)
+        self.assertEqual(obj["TestDurationInSeconds"], dur)
+        with self.assertRaises(KeyError):
+            obj["AnswerKey"]
+
+        # Now add an answerkey the proper way
+
+        resp = self.client.update_qualification_type(
+            QualificationTypeId = qualId,
+            Test = test,
+            TestDurationInSeconds = dur,
+            AnswerKey = answerKey
+            )
+        self.is_ok(resp)
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        self.assertEqual(obj["Test"], test)
+        self.assertEqual(obj["TestDurationInSeconds"], dur)
+        self.assertEqual(obj["AnswerKey"], answerKey)
+
+        # Confirm that attempting to enable AutoGranted here
+        # will cause an error
+        with self.assertRaises(RequestError):
+            self.client.update_qualification_type(
+                QualificationTypeId = qualId,
+                AutoGranted = True
+            )
+
+
+    def test_qualification_update_description(self):
+        """
+        """
+
+        name = "zxcv"
+        desc = "This is the other qual"
+        resp = self.client.create_qualification_type(
+            Name=name,
+            Description=desc,
+            QualificationTypeStatus = "Active",
+            )
+
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        qualId = obj["QualificationTypeId"]
+
+        descUpdate = "This is the updated description"
+        resp = self.client.update_qualification_type(
+            QualificationTypeId = qualId,
+            Description = descUpdate,
+            )
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], descUpdate)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        resp = self.client.get_qualification_type(
+            QualificationTypeId = qualId
+            )
+        self.is_ok(resp)
+
+        obj=resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], descUpdate)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+
+    def test_qualification_update_autogrant(self):
+        """
+        """
+        name = "zxcv"
+        desc = "This is the other qual"
+        resp = self.client.create_qualification_type(
+            Name=name,
+            Description=desc,
+            QualificationTypeStatus = "Active",
+            )
+
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        qualId = obj["QualificationTypeId"]
+
+        # Update the qual to add AutoGrant
+        resp = self.client.update_qualification_type(
+            QualificationTypeId = qualId,
+            AutoGranted = True
+            )
+
+        self.is_ok(resp)
+
+        resp = self.client.get_qualification_type(
+            QualificationTypeId = qualId
+            )
+        self.is_ok(resp)
+
+        obj=resp["QualificationType"]
+        self.assertEqual( obj["AutoGranted"], True )
+        self.assertEqual( obj["AutoGrantedValue"], 1 )
+
+        # Update just the auto grant value
+        resp = self.client.update_qualification_type(
+            QualificationTypeId = qualId,
+            AutoGrantedValue = 20
+            )
+
+        self.is_ok(resp)
+
+        resp = self.client.get_qualification_type(
+            QualificationTypeId = qualId
+            )
+        self.is_ok(resp)
+
+        obj=resp["QualificationType"]
+        self.assertEqual( obj["AutoGranted"], True )
+        self.assertEqual( obj["AutoGrantedValue"], 20 )
+
+        # Disable the auto Grant
+        resp = self.client.update_qualification_type(
+            QualificationTypeId = qualId,
+            AutoGranted = False
+            )
+
+        self.is_ok(resp)
+
+        resp = self.client.get_qualification_type(
+            QualificationTypeId = qualId
+            )
+        self.is_ok(resp)
+
+        obj=resp["QualificationType"]
+        self.assertEqual( obj["AutoGranted"], False )
+        with self.assertRaises(KeyError):
+            obj["AutoGrantedValue"]
+
+        # Try to use a different requester to set the auto
+        # grant value
+        requester = self.create_new_client("req1")
+
+        RequestError = self.client._load_exceptions().RequestError
+        with self.assertRaises(RequestError):
+            resp = requester.update_qualification_type(
+                QualificationTypeId = qualId,
+                AutoGranted = True
+            )
+
+        resp = self.client.get_qualification_type(
+            QualificationTypeId = qualId
+            )
+        self.is_ok(resp)
+
+        obj=resp["QualificationType"]
+        self.assertEqual( obj["AutoGranted"], False )
+        with self.assertRaises(KeyError):
+            obj["AutoGrantedValue"]
+
+
+
+
+    def test_qual_delete_with_req_pend(self):
+        """
+        Test Deleting a qual with a pending worker request
+        """
+        RequestError = self.client._load_exceptions().RequestError
+        worker1_client = self.create_new_client("test2")
+        worker1 = Worker.objects.get(user__username = "test2")
+        actor = WorkerActor(worker1)
+
+        name = "zxcv"
+        desc = "This is the other qual"
+        resp = self.client.create_qualification_type(
+            Name=name,
+            Description=desc,
+            QualificationTypeStatus = "Active",
+            )
+
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], False)
+
+        qualId = obj["QualificationTypeId"]
+
+        # Have an actor request the qual - and then lets confirm it
+        # gets rejected when the qual is deleted.
+
+        qual = Qualification.objects.get( aws_id = qualId, dispose=False )
+        req = actor.create_qual_request(qual)
+        actor.process_qual_request(qual, req)
+
+        req.refresh_from_db()
+        self.assertTrue(req.is_pending())
+
+        # Delete the qualification -
+
+        resp = self.client.delete_qualification_type(
+            QualificationTypeId = qualId
+            )
+        self.is_ok(resp)
+
+        req.refresh_from_db()
+        self.assertTrue( req.is_rejected() )
+
+        with self.assertRaises(RequestError):
+            resp = self.client.get_qualification_type(
+                QualificationTypeId = qualId
+            )
+
+    def test_list_workers_with_qual(self):
+        """
+        """
+        startTime = timezone.now()
+        RequestError = self.client._load_exceptions().RequestError
+        worker1_client = self.create_new_client("test2")
+        worker1 = Worker.objects.get(user__username = "test2")
+        worker2_client = self.create_new_client("test3")
+        worker2 = Worker.objects.get(user__username = "test3")
+
+        actor = WorkerActor(worker1)
+        actor2 = WorkerActor(worker2)
+
+        # Create a qual with auto grant
+        name = "zxcv"
+        desc = "This is the other qual"
+        agval = 10
+        resp = self.client.create_qualification_type(
+            Name=name,
+            Description=desc,
+            QualificationTypeStatus = "Active",
+            AutoGranted = True,
+            AutoGrantedValue= agval
+            )
+
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], True)
+
+        qualId = obj["QualificationTypeId"]
+
+        # Check for an empty Qual grant list
+
+        resp = self.client.list_workers_with_qualification_type(
+            QualificationTypeId = qualId,
+            MaxResults = 10
+            )
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual( numResults, 0 )
+        grants = resp["Qualifications"]
+        self.assertEqual( len(grants), 0 )
+
+        # Now setup the workers with grants for this qualification
+        qual = Qualification.objects.get( aws_id = qualId, dispose=False )
+
+        req = actor.create_qual_request(qual)
+        actor.process_qual_request(qual, req)
+
+        req.refresh_from_db()
+        self.assertTrue(req.is_approved())
+
+        req = actor2.create_qual_request(qual)
+        actor2.process_qual_request(qual, req)
+
+        req.refresh_from_db()
+        self.assertTrue(req.is_approved())
+
+        # Check for an Qual grant list
+        resp = self.client.list_workers_with_qualification_type(
+            QualificationTypeId = qualId,
+            MaxResults = 10
+            )
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual( numResults, 2 )
+        grants = resp["Qualifications"]
+        self.assertEqual( len(grants), 2 )
+
+        workerSet = set()
+        for grant in grants:
+            self.assertEqual(grant["QualificationTypeId"], qualId)
+            self.assertTrue( grant["GrantTime"] > startTime )
+            self.assertEqual( grant["IntegerValue"], agval )
+            self.assertEqual( grant["Status"], "Granted" )
+            workerSet.add( grant["WorkerId"] )
+
+        expWorkerSet = set([worker1.aws_id, worker2.aws_id])
+        self.assertEqual( workerSet, expWorkerSet )
+
+        # Delete the qualification - grants should persist.
+        resp = self.client.delete_qualification_type(
+            QualificationTypeId = qualId
+        )
+        self.is_ok(resp)
+
+        # Check that the grants have been removed
+        resp = self.client.list_workers_with_qualification_type(
+            QualificationTypeId = qualId,
+            MaxResults = 10
+            )
+        self.is_ok(resp)
+
+        numResults = resp["NumResults"]
+        self.assertEqual( numResults, 0 )
+        grants = resp["Qualifications"]
+        self.assertEqual( len(grants), 0 )
+
+    def test_qual_delete_with_tasks(self):
+        """
+        This task tests the qualifications when the hits
+        are still existing.
+        """
+        startTime = timezone.now()
+        RequestError = self.client._load_exceptions().RequestError
+        worker1_client = self.create_new_client("test2")
+        worker1 = Worker.objects.get(user__username = "test2")
+        worker2_client = self.create_new_client("test3")
+        worker2 = Worker.objects.get(user__username = "test3")
+        actor = WorkerActor(worker1)
+        actor2 = WorkerActor(worker2)
+
+        # Create a qual with auto grant
+        name = "zxcv"
+        desc = "This is the other qual"
+        agval = 10
+        resp = self.client.create_qualification_type(
+            Name=name,
+            Description=desc,
+            QualificationTypeStatus = "Active",
+            AutoGranted = True,
+            AutoGrantedValue= agval
+            )
+
+        self.is_ok(resp)
+
+        obj = resp["QualificationType"]
+        self.assertEqual(obj["Name"], name)
+        self.assertEqual(obj["Description"], desc)
+        self.assertEqual(obj["QualificationTypeStatus"], "Active")
+        self.assertEqual(obj["IsRequestable"], True)
+        self.assertEqual(obj["AutoGranted"], True)
+
+        qualId = obj["QualificationTypeId"]
+
+        # Create a worker with this qual
+        qual = Qualification.objects.get( aws_id = qualId, dispose=False )
+
+        req = actor.create_qual_request(qual)
+        actor.process_qual_request(qual, req)
+
+        question = load_quesform(2)
+
+        # Create a task that depends on this qual
+        resp = self.client.create_hit(
+            MaxAssignments = 1,
+            LifetimeInSeconds = 10000,
+            AssignmentDurationInSeconds = 100,
+            Reward = "10.00",
+            Title = "Task With Quals",
+            Description = "asdfasdfasdf asdf  asdf asd fsdf",
+            Question = question,
+            RequesterAnnotation = "rewq",
+            QualificationRequirements = [
+                {
+                    "QualificationTypeId" : qualId,
+                    "Comparator" : "GreaterThan",
+                    "IntegerValues" : [ 5 ],
+                    "RequiredToPreview" : False
+                },
+            ],
+        )
+        self.is_ok(resp)
+
+        taskTypeId = resp["HIT"]["HITTypeId"]
+        taskId = resp["HIT"]["HITId"]
+        task = Task.objects.get(aws_id = taskId)
+
+        assignment = actor.accept_task( task )
+
+        # Delete the Qualification
+        resp = self.client.delete_qualification_type(
+            QualificationTypeId = qualId
+            )
+        self.is_ok(resp)
+
+        # Check that the qualification has entered into the
+        # disposing state
+        resp = self.client.get_qualification_type(
+                QualificationTypeId = qualId
+            )
+        self.is_ok(resp)
+
+        qualType = resp["QualificationType"]
+        self.assertEqual( qualType["QualificationTypeStatus"], "Disposing")
+        self.assertTrue( qualType["CreationTime"] > startTime )
+
+        # Check that our worker's grant still exists.
+        resp = self.client.get_qualification_score(
+            QualificationTypeId = qualId,
+            WorkerId = actor.worker.aws_id
+        )
+        self.is_ok(resp)
+        obj = resp["Qualification"]
+        self.assertEqual(obj["Status"], "Granted")
+        self.assertEqual(obj["WorkerId"], actor.worker.aws_id)
+        self.assertEqual(obj["IntegerValue"], agval)
+
+        # Complete the task and delete it so that we
+        # can see the qualification go from the disposing state
+        # to being actually disposed.
+
+        data = {
+            "favorite" : ["blue"],
+            "acceptible" : ["red", "blue"]
+        }
+        actor.complete_assignment( assignment, data )
+
+        # Task should now be reviewable
+
+        resp = self.client.get_hit(HITId = taskId)
+        self.is_ok(resp)
+
+        taskObj = resp["HIT"]
+        self.assertEqual( taskObj["HITStatus"], "Reviewable" )
+
+        resp = self.client.approve_assignment(
+            AssignmentId = assignment.aws_id,
+            RequesterFeedback = "Good Job"
+        )
+        self.is_ok(resp)
+
+        # Check that the qual still exists
+        resp = self.client.get_qualification_type(
+                QualificationTypeId = qualId
+            )
+        self.is_ok(resp)
+
+        qualType = resp["QualificationType"]
+        self.assertEqual( qualType["QualificationTypeStatus"], "Disposing")
+
+        # Task can now be deleted
+        resp = self.client.delete_hit(HITId = taskId)
+        self.is_ok(resp)
+
+        # Now the qualification should also have been deleted
+        with self.assertRaises(RequestError):
+            resp = self.client.get_qualification_type(
+                QualificationTypeId = qualId
+            )
+
+        # Check that we can no longer generate tasks from this task
+        # type.
+
+        with self.assertRaises(RequestError):
+            resp = self.client.create_hit_with_hit_type(
+                HITTypeId = taskTypeId,
+                MaxAssignments = 1,
+                LifetimeInSeconds = 1000,
+                Question = question,
+                RequesterAnnotation = "won't happen"
+            )
