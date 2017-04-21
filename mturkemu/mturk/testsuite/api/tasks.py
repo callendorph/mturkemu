@@ -2225,3 +2225,67 @@ class TaskTests(RequesterLiveTestCase):
 
         with self.assertRaises(Exception):
             self.actors[0].accept_task(task)
+
+    def test_create_hit_with_inactive_qual(self):
+        """
+        Inactive quals should not allow the creation of HIT
+        check this.
+        """
+        RequestError = self.client._load_exceptions().RequestError
+
+        # Create a qualification in the inactive state to start
+        name = "zxcv"
+        desc = "This is the other qual"
+        resp = self.client.create_qualification_type(
+            Name=name,
+            Description=desc,
+            QualificationTypeStatus = "Inactive",
+            AutoGranted = True,
+            AutoGrantedValue = 10
+            )
+
+        self.is_ok(resp)
+
+        qualId = resp["QualificationType"]["QualificationTypeId"]
+
+        # Attempt to create a HIT Type - this should fail on
+        # an inactive Qualification
+
+        with self.assertRaises(RequestError):
+            resp = self.client.create_hit_type(
+                AssignmentDurationInSeconds = 1000,
+                Title="asdf",
+                Description="qwer",
+                Reward="0.05",
+                QualificationRequirements=[{
+                    "QualificationTypeId" : qualId,
+                    "Comparator" : "GreaterThan",
+                    "IntegerValues" : [ 5 ],
+                    "RequiredToPreview": False
+                }]
+            )
+
+        # Attempt to create a full HIT with the inactive qual
+        question = load_quesform(1)
+
+        with self.assertRaises(RequestError):
+            resp = self.client.create_hit(
+                MaxAssignments = 1,
+                LifetimeInSeconds = 10000,
+                AssignmentDurationInSeconds = 100,
+                Reward = "0.05",
+                Title = "rewqeqwerqw",
+                Description="qwerqwer",
+                Question = question,
+                QualificationRequirements=[{
+                    "QualificationTypeId" : qualId,
+                    "Comparator" : "GreaterThan",
+                    "IntegerValues" : [ 5 ],
+                    "RequiredToPreview": False
+                }]
+            )
+
+        # Create Active Qualification
+        # Create HIT Type with requirement for this qual
+        # Set Qualification to Inactive
+        # Attempt to create HIT with HIT Type - should fail
