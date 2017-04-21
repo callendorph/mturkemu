@@ -10,7 +10,7 @@
 from django.utils import timezone
 
 from mturk.models import *
-from mturk.taskviews import CreateTaskType, CreateTask
+from mturk.taskviews import CreateTaskType, CreateTask, QualificationHandler
 from mturk.errors import *
 from mturk.xml.questions import QuestionValidator
 from mturk.fields import *
@@ -362,100 +362,8 @@ class MTurkHandlers(object):
         return({})
 
     def CreateQualificationType(self, **kwargs):
-        requester = kwargs["EmuRequester"]
-
-        name = kwargs["Name"]
-        try:
-            qual = Qualification.objects.get(
-                requester = requester,
-                name=name,
-                dispose=False,
-            )
-            raise QualificationTypeAlreadyExistsError()
-        except Qualification.DoesNotExist:
-            pass
-
-        createParams = {
-            "requester" : requester,
-            "name": name,
-            "description" : kwargs["Description"],
-        }
-
-        status = kwargs["QualificationTypeStatus"]
-        if ( status == "Active" ):
-            createParams["status"] = QualStatusField.ACTIVE
-        else:
-            createParams["status"] = QualStatusField.INACTIVE
-
-        try:
-            retry_delay = int(kwargs["RetryDelayInSeconds"])
-            createParams["retry_active"] = True
-            createParams["retry_delay"] = timedelta(seconds=retry_delay)
-        except KeyError:
-            createParams["retry_active"] = False
-
-        q = QuestionValidator()
-        try:
-            test = kwargs["Test"]
-            if ( len(test) > 65535 ):
-                raise QuestionTooLongError()
-
-            if ( "TestDurationInSeconds" not in kwargs):
-                raise MissingArgumentError("TestDurationInSeconds")
-
-            testDuration = int(kwargs["TestDurationInSeconds"])
-            if ( "AutoGranted" in kwargs ):
-                if ( kwargs["AutoGranted"] ):
-                    raise ValidationError(
-                        ["Qualification cannot have AutoGranted 'True' and have a Test QuestionForm"]
-                    )
-
-            name = q.determine_type(test)
-            if ( name not in ["QuestionForm"]):
-                raise QualTestInvalidError()
-
-            q.validate(name, test)
-            createParams["test"] = test
-            createParams["test_duration"] = timedelta(seconds=testDuration)
-        except KeyError:
-            pass
-
-        try:
-            answerKey = kwargs["AnswerKey"]
-            if ( len(answerKey) > 65535 ):
-                raise AnswerTooLongError()
-
-            name = q.determine_type(answerKey)
-            if ( name not in ["AnswerKey"]):
-                raise QualAnswerInvalidError()
-
-            q.validate(name, answerKey)
-            createParams["answer"] = answerKey
-
-        except KeyError:
-            # Not required even with a test - just means requester
-            # must manually accept.
-            pass
-
-        try:
-            autoGranted = kwargs["AutoGranted"]
-            createParams["auto_grant"] = autoGranted
-            try:
-                autoGrantValue = int(kwargs["AutoGrantedValue"])
-                createParams["auto_grant_value"] = autoGrantValue
-            except KeyError:
-                pass
-        except KeyError:
-            pass
-
-
-        qual = Qualification.objects.create(**createParams)
-        qual.save()
-
-        resp = {
-           "QualificationType" : qual.serialize()
-        }
-        return(resp)
+        h = QualificationHandler(kwargs)
+        return(h.create())
 
     def GetFileUploadURL(self, **kwargs):
         raise NotImplementedError("File Upload Not Implemented Yet")
@@ -732,50 +640,8 @@ class MTurkHandlers(object):
 
 
     def UpdateQualificationType(self, **kwargs):
-        requester = kwargs["EmuRequester"]
-        qualId = kwargs["QualificationTypeId"]
-
-        qual = get_object_or_throw(Qualification, aws_id = qualId)
-        if ( qual.requester != requester ):
-            raise PermissionDenied()
-
-        # @todo Update parameters of the Qualification based on
-        # available data
-        try:
-            desc = kwargs["Description"]
-            if ( len(desc) > 0 ):
-                qual.description = desc
-        except KeyError:
-            pass
-
-        try:
-            stat = kwargs["QualificationTypeStatus"]
-            if ( stat == "Active" ):
-                qual.status = QualStatusField.ACTIVE
-            else:
-                qual.status = QualStatusField.INACTIVE
-
-        except KeyError:
-            pass
-
-
-        try:
-            retry = kwargs["RetryDelayInSeconds"]
-            # @todo - handle me
-        except KeyError:
-            pass
-
-        # Need to check create qual type because I think there is
-        # some code that can be reused.
-        #Test='string',
-        #AnswerKey='string',
-        #TestDurationInSeconds=123,
-        #AutoGranted=True|False,
-        #AutoGrantedValue=123
-
-        return({
-            "QualificationType": qual.serialize()
-        })
+        h = QualificationHandler(kwargs)
+        return( h.update() )
 
     def GetAccountBalance(self, **kwargs):
         requester = kwargs["EmuRequester"]

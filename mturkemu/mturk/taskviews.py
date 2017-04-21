@@ -9,6 +9,7 @@
 from mturk.models import *
 from mturk.xml.questions import QuestionValidator
 from mturk.errors import *
+from mturk.utils import get_object_or_throw
 
 from datetime import timedelta
 
@@ -303,3 +304,248 @@ class CreateTask(object):
         task.save()
 
         return(task)
+
+
+class QualificationHandler(object):
+    """
+    Helper class for managing qualification type
+    creation and updating.
+    """
+    def __init__(self, request):
+        """
+        """
+        self.request = request
+
+    def get_test_params(self):
+        """
+        Extract and check the test parameters
+        """
+        q = QuestionValidator()
+
+        hasTest = "Test" in self.request
+        hasTestDur = "TestDurationInSeconds" in self.request
+
+        if ( hasTest != hasTestDur ):
+            raise MissingArgumentError(
+                "TestDurationInSeconds" if hasTest else "Test"
+            )
+
+        try:
+            test = self.request["Test"]
+            if ( len(test) > 65535 ):
+                raise QuestionTooLongError()
+
+            testDuration = int(self.request["TestDurationInSeconds"])
+            if ( "AutoGranted" in self.request ):
+                if ( self.request["AutoGranted"] ):
+                    raise ValidationError(
+                        ["Qualification cannot have AutoGranted 'True' and have a Test QuestionForm"]
+                    )
+
+            name = q.determine_type(test)
+            if ( name not in ["QuestionForm"]):
+                raise QualTestInvalidError()
+
+            q.validate(name, test)
+            dur = timedelta(seconds=testDuration)
+            return(test, dur)
+        except KeyError:
+            return(None, None)
+
+    def get_answer_param(self):
+        q = QuestionValidator()
+        try:
+            answerKey = self.request["AnswerKey"]
+            if ( len(answerKey) > 65535 ):
+                raise AnswerTooLongError()
+
+            name = q.determine_type(answerKey)
+            if ( name not in ["AnswerKey"]):
+                raise QualAnswerInvalidError()
+
+            q.validate(name, answerKey)
+            return(answerKey)
+        except KeyError:
+            return(None)
+
+    def get_autogrant_params(self):
+        try:
+            ag = self.request["AutoGranted"]
+        except KeyError:
+            ag = None
+
+        try:
+            agVal = int(self.request.get("AutoGrantedValue", -1))
+        except KeyError:
+            agVal = None
+
+        return(ag, agVal)
+
+    def get_qual_status(self):
+        try:
+            status = self.request["QualificationTypeStatus"]
+            if ( status == "Active" ):
+                stat = QualStatusField.ACTIVE
+            elif (status == "Inactive"):
+                stat = QualStatusField.INACTIVE
+            else:
+                raise ValidationError(
+                    ["Invalid 'QualificationTypeStatus' value: %s" % status])
+            return(stat)
+        except KeyError:
+            return(None)
+
+    def get_retry_delay(self):
+        try:
+            retry_delay = int(self.request["RetryDelayInSeconds"])
+            return(timedelta(seconds=retry_delay))
+        except KeyError:
+            return(None)
+
+    def get_description(self):
+        try:
+            desc = self.request["Description"]
+            if ( len(desc) == 0 ):
+                raise ValidationError(["'Description' cannot be length zero"])
+            return(desc)
+            qual.description = desc
+        except KeyError:
+            return(None)
+
+    def create(self):
+        """
+        """
+        requester = self.request["EmuRequester"]
+
+        name = self.request["Name"]
+        if ( len(name) == 0 ):
+            raise ValidationError(["'Name' cannot be length zero"])
+        try:
+            qual = Qualification.objects.get(
+                requester = requester,
+                name=name,
+                dispose=False,
+            )
+            raise QualificationTypeAlreadyExistsError()
+        except Qualification.DoesNotExist:
+            pass
+
+        desc = self.get_description()
+        if ( desc is None ):
+            raise MissingArgumentError("Description")
+
+        createParams = {
+            "requester" : requester,
+            "name": name,
+            "description" : desc
+        }
+
+        stat = self.get_qual_status()
+        if ( stat is not None ):
+            createParams["status"] = stat
+        else:
+            raise MissingArgumentError("QualificationTypeStatus")
+
+        retry_delay = self.get_retry_delay()
+        if ( retry_delay is not None ):
+            createParams["retry_active"] = True
+            createParams["retry_delay"] = retry_delay
+        else:
+            createParams["retry_active"] = False
+
+        test,testDur = self.get_test_params()
+        if ( test is not None ):
+            createParams["test"] = test
+            createParams["test_duration"] = testDur
+
+        answerKey = self.get_answer_param()
+        if ( answerKey is not None ):
+            if ( test is None ):
+                raise ValidationError(
+                    ["Must specify the 'Test' parameter if the 'AnswerKey' parameter is used"]
+                )
+            createParams["answer"] = answerKey
+
+        ag, agVal = self.get_autogrant_params()
+        if ( ag is not None ):
+            if ( test is not None ):
+                raise ValidationError(
+                    ["'AutoGranted' and 'Test' are mutually exclusive"]
+                )
+            createParams["auto_grant"] = ag
+            createParams["auto_grant_value"] = abs(agVal)
+
+        qual = Qualification.objects.create(**createParams)
+
+        resp = {
+           "QualificationType" : qual.serialize()
+        }
+        return(resp)
+
+    def update(self):
+        """
+        """
+        requester = self.request["EmuRequester"]
+        qualId = self.request["QualificationTypeId"]
+
+        qual = get_object_or_throw(
+            Qualification,
+            aws_id = qualId,
+            requester = requester,
+            dispose=False
+        )
+
+        desc = self.get_description()
+        if ( desc is not None ):
+            qual.description = desc
+
+        stat = self.get_qual_status()
+        if ( stat is not None ):
+            qual.status = stat
+
+        test,testDur = self.get_test_params()
+        if ( test is not None ):
+            qual.test = test
+            qual.test_duration = testDur
+
+        answerKey = self.get_answer_param()
+        if ( answerKey is not None ):
+            if ( test is None ):
+                # Must specify test even when wanting to just
+                # replace the answer key.
+                raise ValidationError(
+                    ["Must specify the 'Test' parameter if the 'AnswerKey' parameter is used"]
+                )
+            qual.answer = answerKey
+        elif ( test is not None ):
+            qual.answer = ""
+
+        ag, agVal = self.get_autogrant_params()
+        if ( ag is not None ):
+            if ( qual.test is not None and len(qual.test) > 0 ):
+                raise ValidationError(
+                    ["'AutoGranted' and 'Test' are mutually exclusive"]
+                )
+            qual.auto_grant = ag
+            qual.auto_grant_value = abs(agVal)
+
+        if ( agVal >= 0 ):
+            if ( qual.auto_grant ):
+                qual.auto_grant_value = agVal
+            else:
+                raise ValidationError(
+                    ["'AutoGrantedValue' requires that 'AutoGranted' is asserted"]
+                )
+
+        # RetryDelay
+        retry_delay = self.get_retry_delay()
+        if ( retry_delay is not None ):
+            qual.retry_active = True
+            qual.retry_delay = retry_delay
+
+        qual.save()
+
+        resp = {
+           "QualificationType" : qual.serialize()
+        }
+        return(resp)
