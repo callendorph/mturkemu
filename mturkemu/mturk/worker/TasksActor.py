@@ -76,7 +76,8 @@ class TasksActor(object):
             try:
                 grant = self.worker.qualificationgrant_set.get(
                     active = True,
-                    qualification = qualreq.qualification
+                    qualification = qualreq.qualification,
+                    dispose=False
                 )
             except:
                 grant = None

@@ -369,6 +369,9 @@ class QualificationGrant(models.Model):
     MAX_REASON_LEN = 256
     reason = models.CharField(max_length = MAX_REASON_LEN, blank=True)
 
+    # Delete grant using the 'Dispose'
+    dispose= models.BooleanField(default=False)
+
     @property
     def task_count(self):
         """
@@ -548,6 +551,8 @@ class TaskType(KeywordMixinModel):
     title=models.CharField(max_length = MAX_TITLE_LEN)
     description=models.TextField()
     qualifications = models.ManyToManyField(QualificationRequirement, blank=True)
+
+    dispose = models.BooleanField(default=False)
 
     def has_quals(self):
         return(self.qualifications.all().exists())

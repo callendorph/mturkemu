@@ -80,7 +80,7 @@ def create_worker_quals(sender, instance, **kwargs):
     for qualId in qualIds:
 
         try:
-            qual = Qualification.objects.get(aws_id = qualId)
+            qual = Qualification.objects.get(aws_id = qualId, dispose=False)
         except Qualification.DoesNotExist:
             logger.error(
                 "Unable to Find Qualification with Id: %s" % qualId

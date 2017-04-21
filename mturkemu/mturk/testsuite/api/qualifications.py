@@ -300,7 +300,7 @@ class QualificationTests(RequesterLiveTestCase):
         qualId = obj["QualificationTypeId"]
 
         # Use the worker to request the qualification
-        qual = Qualification.objects.get( aws_id = qualId )
+        qual = Qualification.objects.get( aws_id = qualId, dispose=False )
         req = actor.create_qual_request(qual)
         self.assertTrue( req.is_idle() )
         self.assertEqual( req.worker, worker1 )
@@ -484,7 +484,7 @@ class QualificationTests(RequesterLiveTestCase):
         qualId = obj["QualificationTypeId"]
 
         # Use the worker to request the qualification
-        qual = Qualification.objects.get( aws_id = qualId )
+        qual = Qualification.objects.get( aws_id = qualId, dispose=False )
         req = actor.create_qual_request(qual)
         self.assertTrue( req.is_idle() )
         self.assertEqual( req.worker, worker1 )
@@ -574,7 +574,7 @@ class QualificationTests(RequesterLiveTestCase):
         qualId = obj["QualificationTypeId"]
 
         # Use the worker to request the qualification
-        qual = Qualification.objects.get( aws_id = qualId )
+        qual = Qualification.objects.get( aws_id = qualId, dispose=False )
         req = actor.create_qual_request(qual)
         self.assertTrue( req.is_idle() )
         self.assertEqual( req.worker, worker1 )
@@ -673,7 +673,7 @@ class QualificationTests(RequesterLiveTestCase):
         qualId = obj["QualificationTypeId"]
 
         # Use the worker to request the qualification
-        qual = Qualification.objects.get( aws_id = qualId )
+        qual = Qualification.objects.get( aws_id = qualId, dispose=False )
         req = actor.create_qual_request(qual)
         self.assertTrue( req.is_idle() )
         self.assertEqual( req.worker, worker1 )
@@ -729,7 +729,8 @@ class QualificationTests(RequesterLiveTestCase):
 
         grant = QualificationGrant.objects.get(
             worker=worker1,
-            qualification = req.qualification
+            qualification = req.qualification,
+            dispose=False
         )
 
         self.assertEqual( grant.value, expScore )
@@ -803,7 +804,7 @@ class QualificationTests(RequesterLiveTestCase):
         qualId = obj["QualificationTypeId"]
 
         # Use the worker to request the qualification
-        qual = Qualification.objects.get( aws_id = qualId )
+        qual = Qualification.objects.get( aws_id = qualId, dispose=False )
         req = actor.create_qual_request(qual)
         self.assertTrue( req.is_idle() )
         self.assertEqual( req.worker, worker1 )
@@ -859,7 +860,8 @@ class QualificationTests(RequesterLiveTestCase):
 
         grant = QualificationGrant.objects.get(
             worker=worker1,
-            qualification = req.qualification
+            qualification = req.qualification,
+            dispose=False
         )
 
         self.assertEqual( grant.value, expScore )
@@ -933,7 +935,7 @@ class QualificationTests(RequesterLiveTestCase):
         qualId = obj["QualificationTypeId"]
 
         # Use the worker to request the qualification
-        qual = Qualification.objects.get( aws_id = qualId )
+        qual = Qualification.objects.get( aws_id = qualId, dispose=False )
         req = actor.create_qual_request(qual)
         self.assertTrue( req.is_idle() )
         self.assertEqual( req.worker, worker1 )
@@ -989,7 +991,8 @@ class QualificationTests(RequesterLiveTestCase):
 
         grant = QualificationGrant.objects.get(
             worker=worker1,
-            qualification = req.qualification
+            qualification = req.qualification,
+            dispose=False
         )
 
         self.assertEqual( grant.value, expScore )
@@ -1032,7 +1035,8 @@ class QualificationTests(RequesterLiveTestCase):
 
         grant = QualificationGrant.objects.get(
             worker=worker2,
-            qualification = req.qualification
+            qualification = req.qualification,
+            dispose=False
         )
 
         self.assertEqual( grant.value, expScore )
@@ -1075,7 +1079,8 @@ class QualificationTests(RequesterLiveTestCase):
 
         grant = QualificationGrant.objects.get(
             worker=worker3,
-            qualification = req.qualification
+            qualification = req.qualification,
+            dispose=False
         )
 
         self.assertEqual( grant.value, expScore )
@@ -1116,7 +1121,7 @@ class QualificationTests(RequesterLiveTestCase):
         qualId = obj["QualificationTypeId"]
 
         # Use the worker to request the qualification
-        qual = Qualification.objects.get( aws_id = qualId )
+        qual = Qualification.objects.get( aws_id = qualId, dispose=False )
         req = actor.create_qual_request(qual)
         self.assertTrue( req.is_idle() )
         self.assertEqual( req.worker, worker1 )
@@ -1172,7 +1177,8 @@ class QualificationTests(RequesterLiveTestCase):
         with self.assertRaises(QualificationGrant.DoesNotExist):
             grant = QualificationGrant.objects.get(
                 worker=worker1,
-                qualification = req.qualification
+                qualification = req.qualification,
+                dispose=False
             )
 
         # Now as the requester we will poll for outstanding requests.

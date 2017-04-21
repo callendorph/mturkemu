@@ -120,6 +120,7 @@ class MTurkHandlers(object):
         numResults,offset = self.get_list_args(kwargs)
 
         q = Q( qualification__aws_id = qualId )
+        q &= Q( dispose = False )
         if ( stat == "Granted" ):
             q &= Q( active = True )
         elif ( stat == "Revoked" ):
@@ -243,14 +244,20 @@ class MTurkHandlers(object):
         qualId = kwargs["QualificationTypeId"]
         workerId = kwargs["WorkerId"]
 
-        qual = get_object_or_throw(Qualification, aws_id = qualId)
-        if ( qual.requester != requester ):
-            raise PermissionDenied()
+        # @note - I'm not filtering for quals in the Disposing state
+        #    just actually disposed quals.
+        qual = get_object_or_throw(
+            Qualification,
+            aws_id = qualId,
+            requester = requester,
+            dispose=False
+        )
 
         qualGrant = get_object_or_throw(
             QualificationGrant,
             worker__aws_id = workerId,
-            qualification = qual
+            qualification = qual,
+            dispose = False
             )
 
         return({
@@ -325,7 +332,8 @@ class MTurkHandlers(object):
         taskType = get_object_or_throw(
             TaskType,
             requester = requester,
-            aws_id = typeId
+            aws_id = typeId,
+            dispose=False
             )
 
         proc = CreateTask(kwargs)
@@ -455,17 +463,19 @@ class MTurkHandlers(object):
     def ListQualificationRequests(self, **kwargs):
         requester = kwargs["EmuRequester"]
         qualId = kwargs.get("QualificationTypeId", None)
+
         if ( qualId is not None ):
-            qual = get_object_or_throw(Qualification, aws_id = qualId)
-            if ( qual.requester != requester ):
-                raise PermissionDenied()
-
-        numResults,offset = self.get_list_args(kwargs)
-
-        if (qualId is not None):
+            qual = get_object_or_throw(
+                Qualification,
+                aws_id = qualId,
+                requester = requester,
+                dispose=False
+            )
             q = Q( qualification__aws_id = qualId )
         else:
             q = Q( qualification__requester=requester )
+
+        numResults,offset = self.get_list_args(kwargs)
 
         # We don't want to include quals that are idle or
         # that have already been approved/rejected
@@ -573,10 +583,13 @@ class MTurkHandlers(object):
         taskTypeId = kwargs.get("HITTypeId", None)
         stat = kwargs.get("Status", "Reviewable")
 
+        # @note - I'm not filtering by dispose here because
+        #    this method will target active Tasks that may be
+        #    leveraging disposed of TaskTypes
         taskType = get_object_or_throw(
             TaskType,
             aws_id = taskTypeId,
-            requester = requester
+            requester = requester,
             )
 
         numResults,offset = self.get_list_args(kwargs)
@@ -691,7 +704,8 @@ class MTurkHandlers(object):
         qual = get_object_or_throw(
             Qualification,
             requester = requester,
-            aws_id = qualId
+            aws_id = qualId,
+            dispose=False
             )
 
         worker = get_object_or_throw(Worker, aws_id = workerId, active=True)
@@ -701,6 +715,7 @@ class MTurkHandlers(object):
             grant = QualificationGrant.objects.get(
                 worker = worker,
                 qualification = qual,
+                dispose = False,
                 )
             grant.value = value
             grant.active = True
@@ -910,15 +925,20 @@ class MTurkHandlers(object):
         qualId = kwargs["QualificationTypeId"]
 
         worker = get_object_or_throw(Worker, aws_id = workerId, active=True)
-        qual = get_object_or_throw(Qualification, aws_id = qualId)
-
-        if ( qual.requester != requester ):
-            raise PermissionDenied()
+        # @note - I'm not filtering for quals in the 'Disposing' state,
+        #    just quals that have been completed disposed.
+        qual = get_object_or_throw(
+            Qualification,
+            aws_id = qualId,
+            requester = requester,
+            dispose=False
+        )
 
         grant = get_object_or_throw(
             QualificationGrant,
             worker = worker,
-            qualification = qual
+            qualification = qual,
+            dispose=False
         )
 
         # @todo - check how AWS responds if the grant
@@ -938,7 +958,11 @@ class MTurkHandlers(object):
     def GetQualificationType(self, **kwargs):
         qualId = kwargs["QualificationTypeId"]
 
-        qual = get_object_or_throw(Qualification, aws_id = qualId)
+        qual = get_object_or_throw(
+            Qualification,
+            aws_id = qualId,
+            dispose = False,
+        )
         return({
             "QualificationType": qual.serialize()
         })
@@ -963,6 +987,7 @@ class MTurkHandlers(object):
             grant = QualificationGrant.objects.get(
                 worker = req.worker,
                 qualification = req.qualification,
+                dispose = False,
             )
             grant.value = value
             grant.active = True
@@ -988,6 +1013,8 @@ class MTurkHandlers(object):
         requester = kwargs["EmuRequester"]
         qualId = kwargs["QualificationTypeId"]
 
+        # @todo - I need to check if we need to filter disposed
+        #    quals from this list. Check on service.
         qual = get_object_or_throw(Qualification, aws_id=qualId)
 
         numResults,offset = self.get_list_args(kwargs)

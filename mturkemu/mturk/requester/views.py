@@ -123,7 +123,8 @@ class RequesterQualGrantsPage(LoginRequiredMixin, MTurkBaseView):
 
         grants = QualificationGrant.objects.filter(
             qualification__requester = requester,
-            active = True
+            active = True,
+            dispose=False
             )
 
         grantsPage = self.create_page(offset, count, grants)
@@ -164,7 +165,8 @@ class RequesterQualsCreate(LoginRequiredMixin, MTurkBaseView):
 
         has_duplicate = Qualification.objects.filter(
             requester = requester,
-            name = name
+            name = name,
+            dispose = False,
         ).exists()
 
         if ( has_duplicate ):

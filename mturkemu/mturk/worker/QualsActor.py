@@ -74,7 +74,8 @@ class QualsActor(object):
 
     def list_qual_grants(self):
         grantList = QualificationGrant.objects.filter(
-            worker = self.worker
+            worker = self.worker,
+            dispose=False
         ).order_by("-granted")
         return(grantList)
 
@@ -264,14 +265,16 @@ class QualsActor(object):
         """
         activeGrants = qual.qualificationgrant_set.filter(
             worker = worker,
-            active = True
+            active = True,
+            dispose = False,
             )
         if ( activeGrants.exists() ):
             raise QualHasActiveGrant()
 
         blockedGrants = qual.qualificationgrant_set.filter(
             worker = worker,
-            active = False
+            active = False,
+            dispose = False
             )
 
         if ( blockedGrants.exists() ):

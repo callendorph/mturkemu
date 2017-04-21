@@ -68,6 +68,7 @@ class CreateTaskType(object):
             "reward": float(request["Reward"]),
             "title" : request["Title"],
             "description": request["Description"],
+            "dispose" : False,
         }
         autoApprove = int(request.get(
             "AutoApprovalDelayInSeconds",
@@ -91,8 +92,8 @@ class CreateTaskType(object):
 
             qualId = reqQual["QualificationTypeId"]
 
-            qual = Qualification.objects.get(aws_id = qualId)
-            if ( not qual.active ):
+            qual = Qualification.objects.get(aws_id = qualId, dispose=False)
+            if ( not qual.is_active() ):
                 raise RequestError(
                     "Qualification[%s] is not active" % qualId, 12
                 )
