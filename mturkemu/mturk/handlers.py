@@ -266,13 +266,39 @@ class MTurkHandlers(object):
 
 
     def UpdateHITTypeOfHIT(self, **kwargs):
+
         # @note - I'm not totally sure how this
         #    method should be implemented - very low
         #    on details in the docs
-        #
-        # Need to do some experimentation in the
-        # sandbox to determine functionality.
-        raise NotImplementedError("Confusing Docs")
+        # For example, what happens if the task already has
+        #   some assignments completed?
+
+        requester = kwargs["EmuRequester"]
+        taskId = kwargs["HITId"]
+        taskTypeId = kwargs["HITTypeId"]
+
+        task = get_object_or_throw(
+            Task,
+            aws_id = aws_id,
+            requester = requester,
+            dispose=False
+        )
+
+        taskType = get_object_or_throw(
+            TaskType,
+            aws_id = aws_id,
+            requester = requester,
+            dispose=False
+        )
+
+        inactiveQual = taskType.has_inactive_qual()
+        if ( inactiveQual is not None ):
+            raise InvalidQualStateError(inactiveQual.aws_id)
+
+        task.tasktype = taskType
+        task.save()
+
+        return({})
 
     def NotifyWorkers(self, **kwargs):
         raise NotImplementedError("No Notifications Yet")
@@ -452,7 +478,6 @@ class MTurkHandlers(object):
 
 
     def CreateHITType(self, **kwargs):
-
         proc = CreateTaskType(kwargs)
 
         try:
