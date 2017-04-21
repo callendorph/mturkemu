@@ -557,6 +557,19 @@ class TaskType(KeywordMixinModel):
     def has_quals(self):
         return(self.qualifications.all().exists())
 
+    def has_inactive_qual(self):
+        """
+        Check if the quals for this task type are active
+        This method returns None if there are not inactive
+        quals, and returns a qual object for the qualification
+        that is inactive.
+        """
+        for qualreq in self.qualifications.all():
+            qual = qualreq.qualification
+            if ( not qual.is_active() ):
+                return(qual)
+        return(None)
+
     def active_task_count(self):
         activeTasks = self.task_set.filter(
             status = TaskStatusField.ASSIGNABLE,

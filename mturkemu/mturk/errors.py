@@ -102,6 +102,13 @@ class QualificationTypeAlreadyExistsError(RequestError):
             "%s.QualficationTypeAlreadyExists" % ERROR_CODE_PREFIX
             )
 
+class InvalidQualStateError(RequestError):
+    def __init__(self, qualId):
+        super().__init__(
+            "Qualification[%s] must be in the 'Active' state" % qualId,
+            "%s.InvalidQualficationState" % ERROR_CODE_PREFIX
+        )
+
 class QualTestInvalidError(RequestError):
     def __init__(self):
         super().__init__(

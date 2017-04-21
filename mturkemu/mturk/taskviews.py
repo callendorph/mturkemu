@@ -95,9 +95,7 @@ class CreateTaskType(object):
 
             qual = Qualification.objects.get(aws_id = qualId, dispose=False)
             if ( not qual.is_active() ):
-                raise RequestError(
-                    "Qualification[%s] is not active" % qualId, 12
-                )
+                raise InvalidQualStateError(qualId)
 
             baseReqParams = {
                 "comparator" : compId,

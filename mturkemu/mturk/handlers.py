@@ -336,6 +336,10 @@ class MTurkHandlers(object):
             dispose=False
             )
 
+        inactiveQual = taskType.has_inactive_qual()
+        if ( inactiveQual is not None ):
+            raise InvalidQualStateError(inactiveQual.aws_id)
+
         proc = CreateTask(kwargs)
         task = proc.create(taskType = taskType)
 

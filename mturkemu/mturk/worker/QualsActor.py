@@ -80,6 +80,9 @@ class QualsActor(object):
         return(grantList)
 
     def check_test_submittable(self, req):
+        if ( not req.qualification.is_active() ):
+            raise InvalidQualStateError(req.qualification.aws_id)
+
         if ( not req.qualification.has_test):
             raise InvalidQualificationTypeError()
 
@@ -194,6 +197,13 @@ class QualsActor(object):
                 "Qualification %s is not Requestable" %
                 qual.aws_id
             )
+
+        if ( not qual.is_active() ):
+            raise Exception(
+                "Qualification %s is not Active" %
+                qual.aws_id
+            )
+
         self.check_existing_grants(self.worker, qual)
         req = self.check_existing_requests(self.worker, qual)
 
