@@ -80,7 +80,6 @@ class QFormAnswer(object):
             "QuestionFormAnswers",
             xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2005-10-01/QuestionFormAnswers.xsd"
             )
-        data = {}
         for name,value in data.items():
             if ( name == "assignmentId" ):
                 continue
@@ -89,8 +88,11 @@ class QFormAnswer(object):
             qId = etree.SubElement(ans, "QuestionIdentifier")
             qId.text = name
 
-            content = etree.SubElement(ans, "FreeTextAnswer")
-            content.text = value
+            content = etree.SubElement(ans, "FreeText")
+            if ( type(value) == list ):
+                content.text = str(value[0])
+            else:
+                content.text = str(value)
 
         return(root)
 

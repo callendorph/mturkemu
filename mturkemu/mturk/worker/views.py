@@ -466,27 +466,6 @@ class WorkerExternalSubmit(View):
       it can't be.
     """
 
-    def encode_answer(self, request):
-
-        root = etree.Element(
-            "QuestionFormAnswers",
-            xmlns="http://mechanicalturk.amazonaws.com/AWSMechanicalTurkDataSchemas/2005-10-01/QuestionFormAnswers.xsd"
-            )
-        data = {}
-        for name,value in request.POST.items():
-            if ( name == "assignmentId" ):
-                continue
-
-            ans = etree.SubElement(root, "Answer")
-            qId = etree.SubElement(ans, "QuestionIdentifier")
-            qId.text = name
-
-            content = etree.SubElement(ans, "FreeTextAnswer")
-            content.text = value
-
-        answerStr = etree.tostring(root)
-        return(answerStr.decode("utf-8"))
-
 
     def post(self, request):
         """

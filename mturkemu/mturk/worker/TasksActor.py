@@ -165,6 +165,7 @@ class TasksActor(object):
 
             ansStr = ans.encode(form)
         else:
+            data = dict(data)
             ansStr = ans.encode(data)
 
         assignment.answer = ansStr
