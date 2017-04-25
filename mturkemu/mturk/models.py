@@ -426,7 +426,7 @@ class QualificationRequirement(models.Model):
             return(vals)
         else:
             ret = []
-            for loc in self.locale_values:
+            for loc in self.locale_values.all():
                 ret.append( str(loc) )
             return(ret)
 
