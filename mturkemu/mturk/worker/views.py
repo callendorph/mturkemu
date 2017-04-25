@@ -320,6 +320,7 @@ class WorkerTaskInfoPage(LoginRequiredMixin, MTurkBaseView):
             cxt["form"] = quesData
         elif ( quesType == "ExternalQuestion" ):
             submitUrl = reverse("worker-ext-submit")
+            submitUrl = settings.BASE_URL + submitUrl
             urlArgs = urlencode({
                 "assignmentId" : assignId,
                 "hitId" : task.aws_id,
