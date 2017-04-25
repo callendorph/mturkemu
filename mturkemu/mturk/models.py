@@ -596,15 +596,13 @@ class TaskType(KeywordMixinModel):
                 "Comparator" : qualreq.get_comparator_display(),
                 "RequiredToPreview": qualreq.required_to_preview,
             }
-            if ( len(qualreq.int_values) > 0):
-                q["IntegerValues"] = qualreq.get_int_values()
-            elif ( qualreq.locale_values.all().exists() ):
+            if ( qualreq.locale_values.all().exists() ):
                 locList = []
                 for locale in qualreq.locale_values.all():
                     locList.append(locale.serialize())
                 q["LocaleValues"] = locList
             else:
-                raise Exception("Invalid Qual Requirement Data!")
+                q["IntegerValues"] = qualreq.get_int_values()
 
             ret.append(q)
 
