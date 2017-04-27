@@ -523,10 +523,11 @@ class MTurkHandlers(object):
         # @note - I'm not filtering by dispose here because
         #    this method will target active Tasks that may be
         #    leveraging disposed of TaskTypes
-        taskType = get_object_or_throw(
-            TaskType,
-            aws_id = taskTypeId,
-            requester = requester,
+        if ( taskTypeId is not None ):
+            taskType = get_object_or_throw(
+                TaskType,
+                aws_id = taskTypeId,
+                requester = requester,
             )
 
         numResults,offset = self.get_list_args(kwargs)
