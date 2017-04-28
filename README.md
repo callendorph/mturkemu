@@ -108,6 +108,12 @@ Notes
 5.  A separate API for workers is in the works that would leverage the
     same botocore base with a different service json definition.
 6.  File Uploads are not supported in the QuestionForm objects yet.
+7.  Currently, binary or image data is not well supported in the question
+    form representation in the UI.
+8.  Auto-accepting the next worker task in a series of tasks is not yet
+    implemented in the UI.
+9.  Currently QuestionForm validation is not implemented well. Current
+    implementation is kind of a hack and needs to be refactored.
 
 
 Contributing
