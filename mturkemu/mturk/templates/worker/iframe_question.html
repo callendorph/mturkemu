@@ -2,11 +2,18 @@
   // Load new page onload in the frame.
   var loadCount = 0;
   var onFrameLoad = function() {
+    var accepted = {% if ext.accepted %} true {% else %} false {% endif %};
     loadCount+=1;
-    console.log("Frame Loaded: " + loadCount);
+  console.log("Frame Loaded: " + loadCount);
+  console.log("Worker Accepted: " + accepted);
+  if ( accepted && loadCount >= 2 ) {
+  // Transition back to the tasks page
+  window.location = "/worker/tasks/next/{{ext.taskTypeId}}/";
+  }
+
   };
 </script>
 
 <iframe src="{{ext.url}}" id="mturk" title="Question" width="100%"
-        height="{{ext.height}}" scrolling="yes" onLoad="onFrameLoad">
+        height="{{ext.height}}" scrolling="yes" onLoad="onFrameLoad();">
 </iframe>

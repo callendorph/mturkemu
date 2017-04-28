@@ -281,6 +281,51 @@ class WorkerTasksPage(LoginRequiredMixin, MTurkBaseView):
 
         return( render(request, "worker/tasks.html", cxt) )
 
+class WorkerNextTaskPage(LoginRequiredMixin, MTurkBaseView):
+    """
+    """
+
+    def find_next_task(self, taskTypeId, worker):
+        """
+        Given a tasktype pk id, determine what the next task for
+        this worker from this series should be.
+        """
+        taskType = get_object_or_404(TaskType, pk = int(taskTypeId))
+
+        activeTasks = taskType.task_set.filter(
+            status = TaskStatusField.ASSIGNABLE,
+            expires__gt = timezone.now()
+        )
+
+        # @note - this could probably be better done using
+        #    an aggregate
+        for task in activeTasks:
+            alreadyDone = task.assignment_set.filter(
+                worker = worker,
+                dispose=False
+            ).exists()
+
+            if ( not alreadyDone ):
+                return(task)
+
+        return(None)
+
+    def get(self, request, tasktype_id):
+        """
+        Get the next available task that is assignable to this worker.
+        The worker must pass a URL encoded 'TaskType' AWS Id as an
+        argument to this method.
+        """
+        worker = self.get_worker(request)
+
+        task = self.find_next_task( tasktype_id, worker )
+
+        if ( task is not None ):
+            return( redirect( "worker-task-info", task_id= task.id ) )
+        else:
+            # No more tasks for the worker to complete
+            return( redirect( "worker-tasks" ) )
+
 
 class WorkerTaskInfoPage(LoginRequiredMixin, MTurkBaseView):
 
@@ -311,8 +356,10 @@ class WorkerTaskInfoPage(LoginRequiredMixin, MTurkBaseView):
         quesType,quesData = q.extract( task.question )
 
         assignId = "ASSIGNMENT_ID_NOT_AVAILABLE"
+        taskAccepted = False
         if ( assignment is not None ):
             assignId = assignment.aws_id
+            taskAccepted = True
 
         cxt["quesType"] = quesType
         if ( quesType == "QuestionForm" ):
@@ -329,22 +376,27 @@ class WorkerTaskInfoPage(LoginRequiredMixin, MTurkBaseView):
                 })
             cxt["ext"] = {
                 "url" : "%s?%s" % (quesData.url,urlArgs),
-                "height" : quesData.height
-                }
+                "height" : quesData.height,
+                "accepted" : taskAccepted,
+                "taskTypeId" : task.tasktype.id,
+            }
 
         elif ( quesType == "HTMLQuestion" ):
             submitUrl = reverse("worker-ext-submit")
+            submitUrl = settings.BASE_URL + submitUrl
             contentUrl = reverse("worker-html-ques")
             urlArgs = urlencode({
                 "assignmentId" : assignId,
                 "hitId" : task.aws_id,
                 "turkSubmitTo": submitUrl,
                 "workerId" : worker.aws_id,
-                })
+            })
 
             cxt["ext"] = {
                 "url" : "%s?%s" % (contentUrl, urlArgs),
-                "height" : quesData.height
+                "height" : quesData.height,
+                "accepted" : taskAccepted,
+                "taskTypeId" : task.tasktype.id,
             }
 
 

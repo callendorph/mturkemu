@@ -24,6 +24,7 @@ workerPatterns = [
     url('^tasks/(?P<task_id>[0-9]+)/accept/$', WorkerTaskAccept.as_view()),
     url('^tasks/(?P<task_id>[0-9]+)/return/$', WorkerTaskReturn.as_view()),
     url('^tasks/(?P<task_id>[0-9]+)/submit/$', WorkerTaskSubmit.as_view(), name="worker-task-submit"),
+    url('^tasks/next/(?P<tasktype_id>[0-9]+)/$', WorkerNextTaskPage.as_view(), name="worker-next-task"),
     url('^tasks/html/$', WorkerHTMLQuestionContent.as_view(), name="worker-html-ques"),
 
     url('^settings/$', WorkerSettingsPage.as_view(), name="worker-settings"),
