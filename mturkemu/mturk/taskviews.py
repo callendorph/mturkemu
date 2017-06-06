@@ -314,6 +314,15 @@ class QualificationHandler(object):
         """
         self.request = request
 
+
+    def _findKeywords(self):
+        try:
+            keywordStr = self.request["Keywords"]
+        except KeyError:
+            return([],[])
+
+        return(parse_keyword_tags(keywordStr))
+
     def get_test_params(self):
         """
         Extract and check the test parameters
@@ -474,6 +483,14 @@ class QualificationHandler(object):
             createParams["auto_grant_value"] = abs(agVal)
 
         qual = Qualification.objects.create(**createParams)
+
+        # Update the keywords
+        self.existing, self.newTags = self._findKeywords()
+        # Create new Tags and add to our existing list.
+        self.existing.extend( create_keyword_tags(self.newTags) )
+        # Setup the keywords
+        for tag in self.existing:
+            qual.keywords.add(tag)
 
         resp = {
            "QualificationType" : qual.serialize()
