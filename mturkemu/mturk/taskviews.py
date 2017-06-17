@@ -21,7 +21,7 @@ def parse_keyword_tags(keywordStr):
     @return tuple consisting of (existingList, newList)
     """
     comps = [x.strip() for x in keywordStr.split(",")]
-    kwds = [x.lower() for x in comps if len(x) > 0 ]
+    kwds = [x for x in comps if len(x) > 0 ]
 
     if ( len(comps) > 0 ):
 
